@@ -11,8 +11,9 @@ import de.eldoria.updatebutler.util.C;
 import de.eldoria.updatebutler.util.FileHelper;
 import de.eldoria.updatebutler.util.FileUtil;
 import lombok.extern.slf4j.Slf4j;
-import net.dv8tion.jda.api.sharding.ShardManager;
 import org.apache.commons.io.FileUtils;
+import spark.Request;
+import spark.Response;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
@@ -109,105 +110,18 @@ public class UpdatesAPI {
 
         get("/update", (((request, response) -> {
             UpdateCheckPayload updatePayload = GSON.fromJson(request.body(), UpdateCheckPayload.class);
-            Optional<Application> application = configuration.getApplicationById(updatePayload.getApplicationId());
 
-            if (application.isEmpty()) {
-                response.status(HttpStatusCodes.STATUS_CODE_BAD_REQUEST);
-                response.body("Application not found.");
-                return HttpStatusCodes.STATUS_CODE_BAD_REQUEST;
-            }
-
-            Optional<Release> optionalRelease = application.get().getRelease(updatePayload.getVersion());
-
-            if (optionalRelease.isEmpty()) {
-                response.status(HttpStatusCodes.STATUS_CODE_BAD_REQUEST);
-                response.body("Invalid release");
-                return HttpStatusCodes.STATUS_CODE_BAD_REQUEST;
-            }
-
-            File file = new File(optionalRelease.get().getFile());
-            if (!file.exists()) {
-                response.status(HttpStatusCodes.STATUS_CODE_SERVER_ERROR);
-                response.body("File not found.");
-                return HttpStatusCodes.STATUS_CODE_SERVER_ERROR;
-            }
-
-            response.header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"");
-            response.header("X-Content-Type-Options", "nosniff");
-            response.type("application/octet-stream");
-
-            HttpServletResponse raw = response.raw();
-            try (var output = raw.getOutputStream()) {
-                Files.copy(file.toPath(), output);
-                // output.flush();
-            } catch (IOException e) {
-                log.error("An error occured while writing the output stream.", e);
-                response.status(HttpStatusCodes.STATUS_CODE_SERVER_ERROR);
-                response.body("File not found.");
-                return HttpStatusCodes.STATUS_CODE_SERVER_ERROR;
-            }
-
-            String name = file.getName();
-
-            optionalRelease.get().downloaded();
-            response.status(HttpStatusCodes.STATUS_CODE_OK);
-
-            return response.raw();
+            return getOutputFileStream(request, response, updatePayload.getApplicationId(), updatePayload.getVersion());
         })));
 
         get("/download", ((request, response) -> {
-            int id;
-
             try {
-                id = Integer.parseInt(request.queryParams("id"));
+                return getOutputFileStream(request, response, Integer.parseInt(request.queryParams("id")),
+                        request.queryParams("version"));
             } catch (NumberFormatException e) {
                 response.status(HttpStatusCodes.STATUS_CODE_BAD_REQUEST);
                 return HttpStatusCodes.STATUS_CODE_BAD_REQUEST;
             }
-
-            Optional<Application> application = configuration.getApplicationById(id);
-
-            if (application.isEmpty()) {
-                response.status(HttpStatusCodes.STATUS_CODE_BAD_REQUEST);
-                response.body("Application not found.");
-                return HttpStatusCodes.STATUS_CODE_BAD_REQUEST;
-            }
-
-            Optional<Release> optionalRelease = application.get()
-                    .getRelease(request.queryParams("version").replace("_", " "));
-
-            if (optionalRelease.isEmpty()) {
-                response.status(HttpStatusCodes.STATUS_CODE_BAD_REQUEST);
-                response.body("Invalid release");
-                return HttpStatusCodes.STATUS_CODE_BAD_REQUEST;
-            }
-
-            File file = new File(optionalRelease.get().getFile());
-            if (!file.exists()) {
-                response.status(HttpStatusCodes.STATUS_CODE_SERVER_ERROR);
-                response.body("File not found.");
-                return HttpStatusCodes.STATUS_CODE_SERVER_ERROR;
-            }
-
-            response.header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"");
-            response.header("X-Content-Type-Options", "nosniff");
-            response.type("application/octet-stream");
-
-            HttpServletResponse raw = response.raw();
-            try (var output = raw.getOutputStream()) {
-                Files.copy(file.toPath(), output);
-                // output.flush();
-            } catch (IOException e) {
-                log.error("An error occured while writing the output stream.", e);
-                response.status(HttpStatusCodes.STATUS_CODE_SERVER_ERROR);
-                response.body("File not found.");
-                return HttpStatusCodes.STATUS_CODE_SERVER_ERROR;
-            }
-
-            optionalRelease.get().downloaded();
-            response.status(HttpStatusCodes.STATUS_CODE_OK);
-
-            return response.raw();
         }));
 
         post("/webhook/:hash", ((request, response) -> {
@@ -296,5 +210,51 @@ public class UpdatesAPI {
             response.status(HttpStatusCodes.STATUS_CODE_OK);
             return HttpStatusCodes.STATUS_CODE_OK;
         }));
+    }
+
+    private Object getOutputFileStream(Request request, Response response, int id, String version) {
+        Optional<Application> application = configuration.getApplicationById(id);
+
+        if (application.isEmpty()) {
+            response.status(HttpStatusCodes.STATUS_CODE_BAD_REQUEST);
+            response.body("Application not found.");
+            return HttpStatusCodes.STATUS_CODE_BAD_REQUEST;
+        }
+
+        Optional<Release> optionalRelease = application.get()
+                .getRelease(request.queryParams("version").replace("_", " "));
+
+        if (optionalRelease.isEmpty()) {
+            response.status(HttpStatusCodes.STATUS_CODE_BAD_REQUEST);
+            response.body("Invalid release");
+            return HttpStatusCodes.STATUS_CODE_BAD_REQUEST;
+        }
+
+        File file = new File(optionalRelease.get().getFile());
+        if (!file.exists()) {
+            response.status(HttpStatusCodes.STATUS_CODE_SERVER_ERROR);
+            response.body("File not found.");
+            return HttpStatusCodes.STATUS_CODE_SERVER_ERROR;
+        }
+
+        response.header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"");
+        response.header("X-Content-Type-Options", "nosniff");
+        response.type("application/octet-stream");
+
+        HttpServletResponse raw = response.raw();
+        try (var output = raw.getOutputStream()) {
+            Files.copy(file.toPath(), output);
+            // output.flush();
+        } catch (IOException e) {
+            log.error("An error occured while writing the output stream.", e);
+            response.status(HttpStatusCodes.STATUS_CODE_SERVER_ERROR);
+            response.body("File not found.");
+            return HttpStatusCodes.STATUS_CODE_SERVER_ERROR;
+        }
+
+        optionalRelease.get().downloaded();
+        response.status(HttpStatusCodes.STATUS_CODE_OK);
+
+        return response.raw();
     }
 }

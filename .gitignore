@@ -117,3 +117,5 @@ target/
 /config/
 
 /logs/
+
+config.json

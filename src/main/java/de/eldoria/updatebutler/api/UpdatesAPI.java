@@ -134,7 +134,7 @@ public class UpdatesAPI {
 
             response.header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"");
             response.header("X-Content-Type-Options", "nosniff");
-            response.type("application/java-archive");
+            response.type("application/octet-stream");
 
             HttpServletResponse raw = response.raw();
             try (var output = raw.getOutputStream()) {
@@ -191,7 +191,7 @@ public class UpdatesAPI {
 
             response.header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"");
             response.header("X-Content-Type-Options", "nosniff");
-            response.type("application/java-archive");
+            response.type("application/octet-stream");
 
             HttpServletResponse raw = response.raw();
             try (var output = raw.getOutputStream()) {

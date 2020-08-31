@@ -16,9 +16,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 
-
 public class Verifier {
-private static final Pattern ID_PATTERN = Pattern.compile("(?:<[@#!&]{1,2})?(?<id>[0-9]{18})(?:>)?");
+    private static final Pattern ID_PATTERN = Pattern.compile("(?:<[@#!&]{1,2})?(?<id>[0-9]{18})(?:>)?");
     private static final Pattern IPV_4 = Pattern.compile("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}(:[0-9]{1,5})?$");
     private static final Pattern IPV_6 = Pattern.compile("(^\\[([a-fA-F0-9]{0,4}:){4,7}[a-fA-F0-9]{0,4}]:"
             + "[0-9]{1,5}$)|(([a-fA-F0-9]{0,4}:){4,7}[a-fA-F0-9]{0,4}$)");
@@ -115,7 +114,7 @@ private static final Pattern ID_PATTERN = Pattern.compile("(?:<[@#!&]{1,2})?(?<i
      * Get the valid users by id.
      *
      * @param shardManager jda for user lookup
-     * @param collect list of long ids
+     * @param collect      list of long ids
      * @return list of valid users.
      */
     public static List<User> getValidUserByLong(ShardManager shardManager, List<Long> collect) {

@@ -32,7 +32,7 @@ public class Release {
         return LocalDateTime.parse(published, C.DATE_FORMAT);
     }
 
-    public void downloaded(){
+    public void downloaded() {
         downloads++;
     }
 }

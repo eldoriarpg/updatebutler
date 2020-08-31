@@ -23,9 +23,8 @@ import static de.eldoria.updatebutler.util.FileUtil.home;
 @Slf4j
 public class Configuration {
 
-    private ReleaseCreateListener listener;
     private static final Gson GSON = new GsonBuilder().serializeNulls().setPrettyPrinting().create();
-
+    private ReleaseCreateListener listener;
     @Getter
     @Expose
     private String token = "";
@@ -101,7 +100,13 @@ public class Configuration {
         return Optional.empty();
     }
 
+    public void setReleaseListener(ReleaseCreateListener listener) {
+        this.listener = listener;
+    }
+
     public void addRelease(Application application, Release release) {
         application.addRelease(release.getVersion(), release);
+        listener.onReleaseCreation(application, release);
+        save();
     }
 }

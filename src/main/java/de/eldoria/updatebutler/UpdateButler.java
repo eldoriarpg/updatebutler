@@ -17,10 +17,10 @@ import java.io.IOException;
 @Slf4j
 public final class UpdateButler {
     private static UpdateButler instance;
+    private static ReleaseCreateListener releaseCreateListener;
     private final Configuration configuration;
     private ShardManager shardManager = null;
     private UpdatesAPI updatesAPI;
-    private static ReleaseCreateListener releaseCreateListener;
 
     private UpdateButler() throws IOException {
         configuration = Configuration.load();
@@ -33,11 +33,16 @@ public final class UpdateButler {
         }
 
         CommandListener commandListener = new CommandListener(configuration, shardManager);
-
         shardManager.addEventListener(commandListener);
 
+
         updatesAPI = new UpdatesAPI(configuration);
-        releaseCreateListener = new ReleaseCreateListener(configuration, shardManager, new ArgumentParser(shardManager));
+        configuration.setReleaseListener(
+                new ReleaseCreateListener(configuration, shardManager, new ArgumentParser(shardManager)));
+    }
+
+    public static void main(String[] args) throws LoginException, IOException {
+        instance = new UpdateButler();
     }
 
     private void initiateJda() throws LoginException {
@@ -54,13 +59,5 @@ public final class UpdateButler {
                 .build();
 
         log.info("{} shards initialized", shardManager.getShardsTotal());
-    }
-
-    public static void main(String[] args) throws LoginException, IOException {
-        instance = new UpdateButler();
-    }
-
-    public static ReleaseCreateListener getReleaseCreateListener() {
-        return releaseCreateListener;
     }
 }

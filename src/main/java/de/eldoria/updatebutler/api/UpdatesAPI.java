@@ -1,17 +1,14 @@
 package de.eldoria.updatebutler.api;
 
 import com.google.api.client.http.HttpStatusCodes;
-import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import de.eldoria.updatebutler.config.Application;
 import de.eldoria.updatebutler.config.Configuration;
 import de.eldoria.updatebutler.config.Release;
+import de.eldoria.updatebutler.config.ReleaseBuilder;
 import de.eldoria.updatebutler.util.C;
-import de.eldoria.updatebutler.util.FileHelper;
-import de.eldoria.updatebutler.util.FileUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
 import spark.Request;
 import spark.Response;
 
@@ -19,13 +16,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Optional;
-import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
 import static spark.Spark.before;
@@ -124,7 +115,7 @@ public class UpdatesAPI {
             }
         }));
 
-        post("/webhook/:hash", ((request, response) -> {
+        post("/webhook/:hash/github", ((request, response) -> {
             String webhook = request.params(":hash");
 
             Optional<Application> applicationByWebhook = configuration.getApplicationByWebhook(webhook);
@@ -152,60 +143,12 @@ public class UpdatesAPI {
                 return HttpStatusCodes.STATUS_CODE_OK;
             }
 
-            Optional<File> optFile = FileHelper.getFileFromURL(gitRelease.getAssets().get(0).url);
-
-            if (optFile.isEmpty()) {
-                log.error("Failed to download file.");
+            Optional<Release> buildRelease = ReleaseBuilder.buildRelease(application, version, gitRelease.getName(), gitRelease.getBody(), gitRelease.getAssets().get(0).getUrl(), gitRelease.isPrerelease());
+            if (buildRelease.isEmpty()) {
                 return HttpStatusCodes.STATUS_CODE_OK;
             }
 
-            File source = optFile.get();
-
-            boolean exists = source.exists();
-
-            byte[] bytes;
-            try {
-                bytes = FileUtils.readFileToByteArray(source);
-            } catch (IOException e) {
-                log.error("Failed to create hash from file.", e);
-                return HttpStatusCodes.STATUS_CODE_OK;
-            }
-
-            Path resources;
-            try {
-                resources = Files.createDirectories(Paths.get(FileUtil.home(), "resources",
-                        Integer.toString(application.getId()),
-                        version));
-            } catch (IOException e) {
-                log.error("Could not create version file");
-                return HttpStatusCodes.STATUS_CODE_OK;
-            }
-
-            Matcher matcher = C.FILE_NAME.matcher(source.getName());
-            if (!matcher.find()) {
-                log.info("Could not parse file name " + source.getName());
-                return HttpStatusCodes.STATUS_CODE_OK;
-            }
-
-
-            String hash = Hashing.sha256().hashBytes(bytes).toString();
-            Path targetPath = Paths.get(resources.toString(),
-                    application.getIdentifier() + "." + matcher.group(2));
-            File target = targetPath.toFile();
-            try {
-                Files.copy(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
-                log.warn("Failed to save file.", e);
-                return HttpStatusCodes.STATUS_CODE_OK;
-            }
-            String publishedDate = C.DATE_FORMAT.format(LocalDateTime.now().atZone(ZoneId.of("UCT")));
-
-            Release release = new Release(version, gitRelease.getName(), gitRelease.getBody(),
-                    gitRelease.isPrerelease(),
-                    gitRelease.getCreatedAt().replaceAll("[TZ]", " "), target.toString(), hash);
-
-            application.addRelease(version, release);
-            configuration.save();
+            configuration.addRelease(application, buildRelease.get());
 
             response.status(HttpStatusCodes.STATUS_CODE_OK);
             return HttpStatusCodes.STATUS_CODE_OK;

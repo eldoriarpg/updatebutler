@@ -114,8 +114,7 @@ target/
 
 .idea/checkstyleidea-libs/
 
+# Bot internal generated data
 /config/
-
 /logs/
-
-config.json
+/resources

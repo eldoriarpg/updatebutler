@@ -7,8 +7,4 @@ public class UpdateCheckPayload {
     private int applicationId;
     private String version;
     private boolean allowDevBuilds;
-
-    public String getVersion() {
-        return version.replace("_", " ");
-    }
 }

@@ -7,7 +7,7 @@ public class UpdateCheckResponse {
 
     public UpdateCheckResponse(boolean newVersionAvailable, String latestVersion, String hash) {
         this.newVersionAvailable = newVersionAvailable;
-        this.latestVersion = latestVersion.replace(" ", "_");
+        this.latestVersion = latestVersion;
         this.hash = hash;
     }
 }

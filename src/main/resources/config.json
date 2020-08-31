@@ -1,0 +1,9 @@
+{
+  "token": "",
+  "hostName": "localhost:19050",
+  "host": "0.0.0.0",
+  "port": 19050,
+  "currentId": 1,
+  "guild_settings": {
+  }
+}

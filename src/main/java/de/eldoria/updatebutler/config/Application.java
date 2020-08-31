@@ -2,7 +2,6 @@ package de.eldoria.updatebutler.config;
 
 import com.google.common.hash.Hashing;
 import com.google.gson.annotations.SerializedName;
-import de.eldoria.updatebutler.UpdateButler;
 import de.eldoria.updatebutler.util.ArgumentParser;
 import lombok.Getter;
 import lombok.Setter;
@@ -77,17 +76,16 @@ public class Application {
     }
 
     public void addRelease(String key, Release release) {
-        UpdateButler.getReleaseCreateListener().onReleaseCreation(this, release);
         releases.put(key, release);
     }
 
     public Optional<Release> getRelease(String key) {
-        if (key.equalsIgnoreCase("latest")) {
+        if ("latest".equalsIgnoreCase(key)) {
             return Optional.ofNullable(getReleases(true).get(0));
         }
 
         for (var release : releases.entrySet()) {
-            if (release.getKey().equalsIgnoreCase(key)) {
+            if (release.getKey().equalsIgnoreCase(key.replace("_", " "))) {
                 return Optional.ofNullable(release.getValue());
             }
         }
@@ -119,7 +117,10 @@ public class Application {
     }
 
     public MessageEmbed getApplicationInfo(Configuration configuration, Guild guild, ArgumentParser parser) {
-        Release latestVersion = getLatestStableVersion();
+        Optional<Release> optionalRelease = getLatestStableVersion();
+        if(optionalRelease.isEmpty()){
+            optionalRelease = getLatestVersion();
+        }
 
         String owner = parser.getGuildMembers(guild, this.owner
                 .stream().
@@ -138,26 +139,38 @@ public class Application {
             builder.addField("Alias", String.join(", ", alias), true);
         }
 
-        if (latestVersion != null) {
-            builder.addField("Latest Version", latestVersion.getVersion(), true)
-                    .addField("Download", configuration.getHost() + latestVersion.getFile(), true)
-                    .addField("Checksum Sha256", latestVersion.getChecksum(), true);
-            builder.setTimestamp(latestVersion.getPublished());
+        if (optionalRelease.isPresent()) {
+            Release release = optionalRelease.get();
+            builder.addField("Latest Version", release.getVersion(), true)
+                    .addField("Download", configuration.getHost() + release.getFile(), true)
+                    .addField("Checksum Sha256", release.getChecksum(), true);
+            builder.setTimestamp(release.getPublished());
         }
 
         return builder.build();
     }
 
-    public Release getLatestStableVersion() {
-        if (releases.isEmpty()) return null;
-        return releases.values().stream().filter(r -> !r.isDevBuild()).sorted(Comparator.comparing(Release::getPublished)).collect(Collectors.toList()).get(0);
+    public Optional<Release> getLatestStableVersion() {
+        if (releases.isEmpty()) return Optional.empty();
+        return releases.values().stream()
+                .filter(r -> !r.isDevBuild())
+                .max(Comparator.comparing(Release::getPublished));
     }
 
-    public Release getLatestVersion() {
-        if (releases.isEmpty()) return null;
-        return releases.values().stream().sorted(Comparator.comparing(Release::getPublished)).collect(Collectors.toList()).get(0);
+    /**
+     * Get the latest release including dev builds
+     * @return latest release
+     */
+    public Optional<Release> getLatestVersion() {
+        if (releases.isEmpty()) return Optional.empty();
+        return releases.values().stream().max(Comparator.comparing(Release::getPublished));
     }
 
+    /**
+     * Get all releases of a application
+     * @param dev true when dev builds should be included
+     * @return list of dev builds.
+     */
     public List<Release> getReleases(boolean dev) {
         List<Release> collect = releases.values()
                 .stream()
@@ -165,6 +178,6 @@ public class Application {
                 .sorted(Comparator.comparing(Release::getPublished))
                 .collect(Collectors.toList());
         Collections.reverse(collect);
-        return collect;
+        return Collections.unmodifiableList(collect);
     }
 }

@@ -1,5 +1,6 @@
 package de.eldoria.updatebutler.config;
 
+import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,9 +15,12 @@ import java.util.Set;
 @Getter
 public class GuildSettings {
     @Setter
+    @Expose
     private String prefix = "+";
     @SerializedName("allowed_users")
+    @Expose
     private Set<Long> allowedUsers = new HashSet<>();
+    @Expose
     private HashMap<String, Application> applications = new HashMap<>();
 
     public boolean isAllowedUser(Member user) {
@@ -33,9 +37,14 @@ public class GuildSettings {
 
     public Optional<Application> getApplication(String name) {
         for (var entry : applications.entrySet()) {
+            if (entry.getValue().getIdentifier().equalsIgnoreCase(name)) {
+                return Optional.ofNullable(entry.getValue());
+            }
+
             if (entry.getKey().equalsIgnoreCase(name)) {
                 return Optional.ofNullable(entry.getValue());
             }
+
             for (String alias : entry.getValue().getAlias()) {
                 if (alias.equalsIgnoreCase(name)) {
                     return Optional.ofNullable(entry.getValue());

@@ -1,6 +1,7 @@
 package de.eldoria.updatebutler.config;
 
 import com.google.common.hash.Hashing;
+import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import de.eldoria.updatebutler.util.ArgumentParser;
 import lombok.Getter;
@@ -23,31 +24,55 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Application {
+    /**
+     * The id of the application. immutable
+     */
     @Getter
     @Setter
+    @Expose
     private int id;
+    /**
+     * A unique string identifier for this application. mutable.
+     */
     @Getter
     @Setter
+    @Expose
     private String identifier;
+    /**
+     * The display name of the application
+     */
     @Getter
     @Setter
     @SerializedName("display_name")
+    @Expose
     private String displayName;
+
+    /**
+     * Short description of the application
+     */
     @Getter
     @Setter
+    @Expose
     private String description;
 
     @Getter
     @Setter
+    @Expose
     private String[] alias;
 
+    @Expose
     private Set<Long> owner;
+
     @Getter
+    @Expose
     private String webhook;
 
     @Getter
     @Setter
+    @Expose
     private Long channel;
+
+    @Expose
     private HashMap<String, Release> releases = new HashMap<>();
 
     public Application(int id, String identifier, String displayName, String description, String[] alias, Long owner, Long channel) {
@@ -107,7 +132,7 @@ public class Application {
 
         EmbedBuilder builder = new EmbedBuilder()
                 .setTitle("#" + id + " " + getDisplayName() + " " + release.getVersion())
-                .setDescription(getDescription())
+                .setDescription(release.getTitle())
                 .addField("Patchnotes", release.getPatchnotes(), false)
                 .addField("Owner", owner, true)
                 .addField("Download", configuration.getHostName() + "/download?id=" + id + "&version=" + release.getVersion().replace(" ", "_"), true)
@@ -118,7 +143,7 @@ public class Application {
 
     public MessageEmbed getApplicationInfo(Configuration configuration, Guild guild, ArgumentParser parser) {
         Optional<Release> optionalRelease = getLatestStableVersion();
-        if(optionalRelease.isEmpty()){
+        if (optionalRelease.isEmpty()) {
             optionalRelease = getLatestVersion();
         }
 
@@ -159,6 +184,7 @@ public class Application {
 
     /**
      * Get the latest release including dev builds
+     *
      * @return latest release
      */
     public Optional<Release> getLatestVersion() {
@@ -168,6 +194,7 @@ public class Application {
 
     /**
      * Get all releases of a application
+     *
      * @param dev true when dev builds should be included
      * @return list of dev builds.
      */

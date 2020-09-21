@@ -23,7 +23,7 @@ import static de.eldoria.updatebutler.util.FileUtil.home;
 @Slf4j
 public class Configuration {
 
-    private static final Gson GSON = new GsonBuilder().serializeNulls().setPrettyPrinting().create();
+    private static final Gson GSON = new GsonBuilder().serializeNulls().excludeFieldsWithoutExposeAnnotation().setPrettyPrinting().create();
     private ReleaseCreateListener listener;
     @Getter
     @Expose

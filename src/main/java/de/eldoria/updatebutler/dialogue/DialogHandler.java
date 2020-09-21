@@ -49,11 +49,17 @@ public class DialogHandler {
         if (guildDialogs.isEmpty()) {
             dialogs.remove(guild.getIdLong());
         }
-
         return true;
     }
 
-    public void startDialog(Guild guild, TextChannel channel, Member member, Dialog dialog) {
+    public void startDialog(Guild guild, TextChannel channel, Member member, String startMessage, Dialog dialog) {
+        if (dialogInProgress(guild, channel, member)) {
+            channel.sendMessage("A dialog is already in progress. Finish dialog or type \"exit\" to end the current dialog.").queue();
+            return;
+        }
+
+        channel.sendMessage(startMessage).queue();
+
         dialogs.computeIfAbsent(guild.getIdLong(), k -> new HashMap<>())
                 .computeIfAbsent(channel.getIdLong(), k -> new HashMap<>())
                 .put(member.getIdLong(), dialog);

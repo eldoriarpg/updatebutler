@@ -48,7 +48,7 @@ public class CommandListener extends ListenerAdapter {
     private final String[] userCommands = {"latestVersion", "versions", "versionInfo", "info", "applist"};
     private final String[] ownerCommands = {"setPrefix", "grant", "revoke", "createApp"};
     private final String[] appCommands = {"deleteApp", "grantAccess", "revokeAccess", "deployUpdate", "deleteUpdate", "setName", "setDescr", "setAlias", "setChannel"};
-    private final DialogHandler dialogHandler = new DialogHandler(configuration);
+    private final DialogHandler dialogHandler = new DialogHandler();
 
     public CommandListener(Configuration configuration, ShardManager shardManager) {
         this.configuration = configuration;
@@ -148,11 +148,11 @@ public class CommandListener extends ListenerAdapter {
             }
 
             if ("revoke".equalsIgnoreCase(label)) {
-                revoke(member, channel, event, guildSettings, args);
+                revoke(member, channel, guild, guildSettings, args);
             }
 
             if ("createApp".equalsIgnoreCase(label)) {
-                createApp(member, channel, guild, event, guildSettings);
+                createApp(member, channel, guild, guildSettings);
             }
             return;
         }
@@ -167,6 +167,21 @@ public class CommandListener extends ListenerAdapter {
             if ("deployUpdate".equalsIgnoreCase(label)) {
                 deployUpdate(member, channel, guild, guildSettings);
                 return;
+            }
+            if ("deleteApp".equalsIgnoreCase(label)) {
+                deleteApp(member, channel, guild, guildSettings);
+            }
+
+            if ("grantAccess".equalsIgnoreCase(label)) {
+                grantAccess(member, channel, guild, guildSettings);
+            }
+
+            if ("revokeAccess".equalsIgnoreCase(label)) {
+                revokeAccess(member, channel, guild, guildSettings);
+            }
+
+            if ("deleteUpdate".equalsIgnoreCase(label)) {
+                deleteUpdate(member, channel, guild, guildSettings);
             }
 
             if (args.length == 0) {
@@ -188,36 +203,21 @@ public class CommandListener extends ListenerAdapter {
                 return;
             }
 
-            if ("deleteApp".equalsIgnoreCase(label)) {
-                deleteApp(member, channel, guild, guildSettings);
-            }
-
-            if ("grantAccess".equalsIgnoreCase(label)) {
-                grantAccess(member, channel, guild, guildSettings);
-            }
-
-            if ("revokeAccess".equalsIgnoreCase(label)) {
-                revokeAccess(member, channel, guild, guildSettings);
-            }
-
-            if ("deleteUpdate".equalsIgnoreCase(label)) {
-                deleteUpdate(member, channel, guild, guildSettings);
-            }
 
             if ("setName".equalsIgnoreCase(label)) {
-                setName(channel, args, guildSettings);
+                setName(channel, args, application);
             }
 
             if ("setDescr".equalsIgnoreCase(label)) {
-                setDescription(channel, args, guildSettings);
+                setDescription(channel, args, application);
             }
 
             if ("setAlias".equalsIgnoreCase(label)) {
-                setAlias(channel, args, guildSettings);
+                setAlias(channel, args, application);
             }
 
             if ("setChannel".equalsIgnoreCase(label)) {
-                setChannel(channel, event, args, guildSettings);
+                setChannel(channel, event, args, application);
             }
             return;
         }
@@ -393,78 +393,78 @@ public class CommandListener extends ListenerAdapter {
     }
 
     private void createApp(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
-        channel.sendMessage("Please enter the application identifier.").queue();
 
-        dialogHandler.startDialog(guild, channel, member, new Dialog() {
-            private String id = null;
-            private String displayName = null;
-            private String[] alias = null;
-            private String description = null;
+        dialogHandler.startDialog(guild, channel, member, "Please enter the application identifier.",
+                new Dialog() {
+                    private String id = null;
+                    private String displayName = null;
+                    private String[] alias = null;
+                    private String description = null;
 
-            @Override
-            public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
-                String content = message.getContentRaw();
-                if (id == null) {
-                    String applicationId = content.replace(" ", "_");
-                    Optional<Application> application = guildSettings.getApplication(applicationId);
-                    if (application.isPresent()) {
-                        channel.sendMessage("This id identifier is already in use.").queue();
-                        channel.sendMessage("Please enter the application identifier.").queue();
-                        return false;
+                    @Override
+                    public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
+                        String content = message.getContentRaw();
+                        if (id == null) {
+                            String applicationId = content.replace(" ", "_");
+                            Optional<Application> application = guildSettings.getApplication(applicationId);
+                            if (application.isPresent()) {
+                                channel.sendMessage("This id identifier is already in use.").queue();
+                                channel.sendMessage("Please enter the application identifier.").queue();
+                                return false;
+                            }
+                            id = applicationId;
+                            channel.sendMessage("Application identifier set to: **" + id + "**.").queue();
+                            channel.sendMessage("Please enter the application name.").queue();
+                            return false;
+                        }
+
+                        if (displayName == null) {
+                            displayName = content;
+                            channel.sendMessage("Application name set to: **" + displayName + "**.").queue();
+                            channel.sendMessage("Enter one or more short aliases for the application or none for no alias.").queue();
+                            return false;
+                        }
+
+                        if (alias == null) {
+                            if (!"none".equalsIgnoreCase(content)) {
+                                alias = content.split("\\s");
+                                channel.sendMessage("Aliases defined: **" + String.join(", ", alias) + "**.").queue();
+                            } else {
+                                alias = new String[0];
+                                channel.sendMessage("No aliases set.").queue();
+                            }
+                            channel.sendMessage("Please provide a short description of the application.").queue();
+                            return false;
+                        }
+
+                        if (description == null) {
+                            description = content;
+                            channel.sendMessage("Description set to:\n>>> " + description).queue();
+                            channel.sendMessage("Please enter a channel where updates should be posted or none.").queue();
+                            return false;
+                        }
+
+                        Long updateChannel = null;
+                        if (!"none".equalsIgnoreCase(content)) {
+                            var textChannel = ArgumentParser.getTextChannel(guild, content);
+                            if (textChannel.isEmpty()) {
+                                channel.sendMessage("This channel is invalid").queue();
+                                channel.sendMessage("Please enter a channel where updates should be posted or none.").queue();
+                                return false;
+                            }
+                            updateChannel = textChannel.get().getIdLong();
+                            channel.sendMessage("Update channel set to " + textChannel.get().getAsMention() + ".").queue();
+                        } else {
+                            channel.sendMessage("No update channel set.").queue();
+                        }
+                        int nextAppId = configuration.getNextAppId();
+                        guildSettings.addApplication(Integer.toString(nextAppId),
+                                new Application(nextAppId, id, displayName, description, alias, member.getIdLong(), updateChannel));
+                        channel.sendMessage("Application registered with id " + nextAppId).queue();
+                        configuration.save();
+                        return true;
                     }
-                    id = applicationId;
-                    channel.sendMessage("Application identifier set to: **" + id + "**.").queue();
-                    channel.sendMessage("Please enter the application name.").queue();
-                    return false;
-                }
-
-                if (displayName == null) {
-                    displayName = content;
-                    channel.sendMessage("Application name set to: **" + displayName + "**.").queue();
-                    channel.sendMessage("Enter one or more short aliases for the application or none for no alias.").queue();
-                    return false;
-                }
-
-                if (alias == null) {
-                    if (!"none".equalsIgnoreCase(content)) {
-                        alias = content.split("\\s");
-                        channel.sendMessage("Aliases defined: **" + String.join(", ", alias) + "**.").queue();
-                    } else {
-                        alias = new String[0];
-                        channel.sendMessage("No aliases set.").queue();
-                    }
-                    channel.sendMessage("Please provide a short description of the application.").queue();
-                    return false;
-                }
-
-                if (description == null) {
-                    description = content;
-                    channel.sendMessage("Description set to:\n>>> " + description).queue();
-                    channel.sendMessage("Please enter a channel where updates should be posted or none.").queue();
-                    return false;
-                }
-
-                Long updateChannel = null;
-                if (!"none".equalsIgnoreCase(content)) {
-                    var textChannel = ArgumentParser.getTextChannel(guild, content);
-                    if (textChannel.isEmpty()) {
-                        channel.sendMessage("This channel is invalid").queue();
-                        channel.sendMessage("Please enter a channel where updates should be posted or none.").queue();
-                        return false;
-                    }
-                    updateChannel = textChannel.get().getIdLong();
-                    channel.sendMessage("Update channel set to " + textChannel.get().getAsMention() + ".").queue();
-                } else {
-                    channel.sendMessage("No update channel set.").queue();
-                }
-                int nextAppId = configuration.getNextAppId();
-                guildSettings.addApplication(Integer.toString(nextAppId),
-                        new Application(nextAppId, id, displayName, description, alias, member.getIdLong(), updateChannel));
-                channel.sendMessage("Application registered with id " + nextAppId).queue();
-                configuration.save();
-                return true;
-            }
-        });
+                });
     }
 
     /*
@@ -477,284 +477,287 @@ public class CommandListener extends ListenerAdapter {
 
     private void deployUpdate(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
         String applicationNames = getUserApplicationNames(guildSettings, member);
-        channel.sendMessage("For which application do you want to deploy an update?\n" + applicationNames).queue();
 
-        dialogHandler.startDialog(guild, channel, member, new Dialog() {
-            private Application application;
-            private String version;
-            private String title;
-            private String description;
-            private Boolean devBuild;
+        dialogHandler.startDialog(guild, channel, member,
+                "For which application do you want to deploy an update?\n" + applicationNames,
+                new Dialog() {
+                    private Application application;
+                    private String version;
+                    private String title;
+                    private String description;
+                    private Boolean devBuild;
 
-            @Override
-            public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
-                if (application == null) {
-                    Optional<Application> application = guildSettings.getApplication(message.getContentRaw());
-                    if (application.isEmpty()) {
-                        channel.sendMessage("This application does not exist.\n" +
-                                "For which application do you want to deploy an update?\n" + applicationNames).queue();
-                        return false;
+                    @Override
+                    public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
+                        if (application == null) {
+                            Optional<Application> application = guildSettings.getApplication(message.getContentRaw());
+                            if (application.isEmpty()) {
+                                channel.sendMessage("This application does not exist.\n" +
+                                        "For which application do you want to deploy an update?\n" + applicationNames).queue();
+                                return false;
+                            }
+
+                            if (!application.get().isOwner(member)) {
+                                channel.sendMessage("This is not your application.\n" +
+                                        "For which application do you want to deploy an update?\n" + applicationNames).queue();
+                                return false;
+                            }
+
+                            this.application = application.get();
+                            channel.sendMessage("Selected application *" + this.application.getDisplayName() + "*.").queue();
+                            channel.sendMessage("Please enter the version string (E.g. 1.0.1)").queue();
+                            return false;
+                        }
+
+                        String content = message.getContentRaw();
+                        if (version == null) {
+                            if (!VERSION.matcher(content).find()) {
+                                channel.sendMessage("Only following characters are allowed: `a-z A-Z 0-9 . - _` and space.").queue();
+                                return false;
+                            }
+                            version = content;
+                            channel.sendMessage("Version set to: *" + version + "*.").queue();
+                            channel.sendMessage("Please enter a update title.").queue();
+                            return false;
+                        }
+
+                        if (title == null) {
+                            title = content;
+                            channel.sendMessage("Title set to: *" + title + "*.").queue();
+                            channel.sendMessage("Please enter the patchnotes.").queue();
+                            return false;
+                        }
+
+                        if (description == null) {
+                            description = content;
+                            channel.sendMessage("Patchnotes set to:\n" + description).queue();
+                            channel.sendMessage("Is this update a dev build? [yes|no]").queue();
+                            return false;
+                        }
+
+                        if (devBuild == null) {
+                            Optional<Boolean> dev = ArgumentParser.parseBoolean(content, "yes", "no");
+                            if (dev.isEmpty()) {
+                                channel.sendMessage("Is this update a dev build? [yes|no]").queue();
+                                return false;
+                            }
+                            devBuild = dev.get();
+                            if (devBuild) {
+                                channel.sendMessage("This version is a dev build.").queue();
+                            } else {
+                                channel.sendMessage("This version is a stable build").queue();
+                            }
+                            channel.sendMessage("Please upload an update file.").queue();
+                            return false;
+                        }
+
+                        if (message.getAttachments().isEmpty()) {
+                            channel.sendMessage("This message does not contain an update file.").queue();
+                            return false;
+                        }
+
+                        Message.Attachment attachment = message.getAttachments().get(0);
+
+                        Optional<Release> buildRelease = ReleaseBuilder.buildRelease(application, version, title, description, message.getAttachments().get(0).getUrl(), devBuild);
+
+                        if (buildRelease.isEmpty()) {
+                            channel.sendMessage("An error occured while creating the release.").queue();
+                            channel.sendMessage("Please upload an update file.").queue();
+                            return false;
+                        }
+
+                        channel.sendMessage("Created new release!").queue();
+                        channel.sendMessage(application.getReleaseInfo(configuration, parser, guild, buildRelease.get())).queue();
+
+                        configuration.addRelease(application, buildRelease.get());
+                        return true;
                     }
-
-                    if (!application.get().isOwner(member)) {
-                        channel.sendMessage("This is not your application.\n" +
-                                "For which application do you want to deploy an update?\n" + applicationNames).queue();
-                        return false;
-                    }
-
-                    this.application = application.get();
-                    channel.sendMessage("Selected application *" + this.application.getDisplayName() + "*.").queue();
-                    channel.sendMessage("Please enter the version string (E.g. 1.0.1)").queue();
-                    return false;
-                }
-
-                String content = message.getContentRaw();
-                if (version == null) {
-                    if (!VERSION.matcher(content).find()) {
-                        channel.sendMessage("Only following characters are allowed: `a-z A-Z 0-9 . - _` and space.").queue();
-                        return false;
-                    }
-                    version = content;
-                    channel.sendMessage("Version set to: *" + version + "*.").queue();
-                    channel.sendMessage("Please enter a update title.").queue();
-                    return false;
-                }
-
-                if (title == null) {
-                    title = content;
-                    channel.sendMessage("Title set to: *" + title + "*.").queue();
-                    channel.sendMessage("Please enter the patchnotes.").queue();
-                    return false;
-                }
-
-                if (description == null) {
-                    description = content;
-                    channel.sendMessage("Patchnotes set to:\n" + description).queue();
-                    channel.sendMessage("Is this update a dev build? [yes|no]").queue();
-                    return false;
-                }
-
-                if (devBuild == null) {
-                    Optional<Boolean> dev = ArgumentParser.parseBoolean(content, "yes", "no");
-                    if (dev.isEmpty()) {
-                        channel.sendMessage("Is this update a dev build? [yes|no]").queue();
-                        return false;
-                    }
-                    devBuild = dev.get();
-                    if (devBuild) {
-                        channel.sendMessage("This version is a dev build.").queue();
-                    } else {
-                        channel.sendMessage("This version is a stable build").queue();
-                    }
-                    channel.sendMessage("Please upload an update file.").queue();
-                    return false;
-                }
-
-                if (message.getAttachments().isEmpty()) {
-                    channel.sendMessage("This message does not contain an update file.").queue();
-                    return false;
-                }
-
-                Message.Attachment attachment = message.getAttachments().get(0);
-
-                Optional<Release> buildRelease = ReleaseBuilder.buildRelease(application, version, title, description, message.getAttachments().get(0).getUrl(), devBuild);
-
-                if (buildRelease.isEmpty()) {
-                    channel.sendMessage("An error occured while creating the release.").queue();
-                    channel.sendMessage("Please upload an update file.").queue();
-                    return false;
-                }
-
-                channel.sendMessage("Created new release!").queue();
-                channel.sendMessage(application.getReleaseInfo(configuration, parser, guild, buildRelease.get())).queue();
-
-                configuration.addRelease(application, buildRelease.get());
-                return true;
-            }
-        });
+                });
     }
 
     private void deleteApp(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
         String userApplicationNames = getUserApplicationNames(guildSettings, member);
 
-        channel.sendMessage("Which application do you want to delete?\n" + userApplicationNames).queue();
+        dialogHandler.startDialog(guild, channel, member,
+                "Which application do you want to delete?\n" + userApplicationNames,
+                new Dialog() {
+                    private Application application;
 
-        dialogHandler.startDialog(guild, channel, member, new Dialog() {
-            private Application application;
+                    @Override
+                    public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
+                        String content = message.getContentRaw();
+                        if (application == null) {
+                            Optional<Application> application = guildSettings.getApplication(content);
+                            if (application.isPresent()) {
+                                this.application = application.get();
+                                channel.sendMessage("Application **" + this.application.getDisplayName() + "** selected.\n"
+                                        + "Please confirm by typing \"confirm\"").queue();
+                                return false;
+                            }
+                            channel.sendMessage("Invalid application.\n"
+                                    + "Which application do you want to delete?\n" + userApplicationNames).queue();
+                            return false;
+                        }
 
-            @Override
-            public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
-                String content = message.getContentRaw();
-                if (application == null) {
-                    Optional<Application> application = guildSettings.getApplication(content);
-                    if (application.isPresent()) {
-                        this.application = application.get();
+                        if ("confirm".equalsIgnoreCase(content)) {
+                            guildSettings.removeApplication(application.getIdentifier());
+                            channel.sendMessage("Application **" + this.application.getDisplayName() + "** selected.\n"
+                                    + "Please confirm by typing \"confirm\"").queue();
+                            return true;
+                        }
                         channel.sendMessage("Application **" + this.application.getDisplayName() + "** selected.\n"
                                 + "Please confirm by typing \"confirm\"").queue();
+                        configuration.save();
                         return false;
                     }
-                    channel.sendMessage("Invalid application.\n"
-                            + "Which application do you want to delete?\n" + userApplicationNames).queue();
-                    return false;
-                }
-
-                if ("confirm".equalsIgnoreCase(content)) {
-                    guildSettings.removeApplication(application.getIdentifier());
-                    channel.sendMessage("Application **" + this.application.getDisplayName() + "** selected.\n"
-                            + "Please confirm by typing \"confirm\"").queue();
-                    return true;
-                }
-                channel.sendMessage("Application **" + this.application.getDisplayName() + "** selected.\n"
-                        + "Please confirm by typing \"confirm\"").queue();
-                configuration.save();
-                return false;
-            }
-        });
+                });
     }
 
     private void grantAccess(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
 
         String userApplicationNames = getUserApplicationNames(guildSettings, member);
 
-        channel.sendMessage("Please select a application.\n" + userApplicationNames).queue();
+        dialogHandler.startDialog(guild, channel, member,
+                "Please select a application.\n" + userApplicationNames,
+                new Dialog() {
+                    private Application application;
+                    private final Set<User> users = new HashSet<>();
 
-        dialogHandler.startDialog(guild, channel, member, new Dialog() {
-            private Application application;
-            private final Set<User> users = new HashSet<>();
+                    @Override
+                    public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
+                        String content = message.getContentRaw();
+                        if (application == null) {
+                            Optional<Application> application = guildSettings.getApplication(content);
+                            if (application.isPresent()) {
+                                this.application = application.get();
+                                channel.sendMessage("Application **" + this.application.getDisplayName() + "** selected.\n"
+                                        + "Please enter a name to add a user.").queue();
+                                return false;
+                            }
+                            channel.sendMessage("Invalid application.\n"
+                                    + "Please select a application.\n" + userApplicationNames).queue();
+                            return false;
+                        }
 
-            @Override
-            public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
-                String content = message.getContentRaw();
-                if (application == null) {
-                    Optional<Application> application = guildSettings.getApplication(content);
-                    if (application.isPresent()) {
-                        this.application = application.get();
-                        channel.sendMessage("Application **" + this.application.getDisplayName() + "** selected.\n"
-                                + "Please enter a name to add a user.").queue();
+                        User user = parser.getGuildUser(guild, content);
+
+                        if (user != null) {
+                            application.addOwner(user);
+                            configuration.save();
+                            channel.sendMessage("User " + user.getAsTag() + " added."
+                                    + "\nWrite another name to add or \"done\" to add the user.").queue();
+                        } else {
+                            channel.sendMessage("Invalid name.\nWrite a name to add or \"exit\".").queue();
+                        }
                         return false;
                     }
-                    channel.sendMessage("Invalid application.\n"
-                            + "Please select a application.\n" + userApplicationNames).queue();
-                    return false;
-                }
-
-                User user = parser.getGuildUser(guild, content);
-
-                if (user != null) {
-                    application.addOwner(user);
-                    configuration.save();
-                    channel.sendMessage("User " + user.getAsTag() + " added."
-                            + "\nWrite another name to add or \"done\" to add the user.").queue();
-                } else {
-                    channel.sendMessage("Invalid name.\nWrite a name to add or \"exit\".").queue();
-                }
-                return false;
-            }
-        });
+                });
     }
 
     private void revokeAccess(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
         String userApplicationNames = getUserApplicationNames(guildSettings, member);
 
-        channel.sendMessage("Please select a application.\n" + userApplicationNames).queue();
+        dialogHandler.startDialog(guild, channel, member,
+                "Please select a application.\n" + userApplicationNames,
+                new Dialog() {
+                    private Application application;
+                    private final Set<User> users = new HashSet<>();
 
-        dialogHandler.startDialog(guild, channel, member, new Dialog() {
-            private Application application;
-            private final Set<User> users = new HashSet<>();
+                    @Override
+                    public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
+                        String content = message.getContentRaw();
+                        if (application == null) {
+                            Optional<Application> application = guildSettings.getApplication(content);
+                            if (application.isPresent()) {
+                                this.application = application.get();
+                                channel.sendMessage("Application **" + this.application.getDisplayName() + "** selected.\n"
+                                        + "Please enter a name to add a user.").queue();
+                                return false;
+                            }
+                            channel.sendMessage("Invalid application.\n"
+                                    + "Please select a application.\n" + userApplicationNames).queue();
+                            return false;
+                        }
 
-            @Override
-            public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
-                String content = message.getContentRaw();
-                if (application == null) {
-                    Optional<Application> application = guildSettings.getApplication(content);
-                    if (application.isPresent()) {
-                        this.application = application.get();
-                        channel.sendMessage("Application **" + this.application.getDisplayName() + "** selected.\n"
-                                + "Please enter a name to add a user.").queue();
+                        User user = parser.getGuildUser(guild, content);
+
+                        if (user != null) {
+                            application.removeOwner(user);
+                            channel.sendMessage("User " + user.getAsTag() + " removed."
+                                    + "\nWrite another name to add or \"done\" to add the user.").queue();
+                        } else {
+                            channel.sendMessage("Invalid name.\nWrite a name to add or \"exit\".").queue();
+                        }
                         return false;
                     }
-                    channel.sendMessage("Invalid application.\n"
-                            + "Please select a application.\n" + userApplicationNames).queue();
-                    return false;
-                }
-
-                User user = parser.getGuildUser(guild, content);
-
-                if (user != null) {
-                    application.removeOwner(user);
-                    channel.sendMessage("User " + user.getAsTag() + " removed."
-                            + "\nWrite another name to add or \"done\" to add the user.").queue();
-                } else {
-                    channel.sendMessage("Invalid name.\nWrite a name to add or \"exit\".").queue();
-                }
-                return false;
-            }
-        });
+                });
     }
 
     private void deleteUpdate(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
         String applicationNames = getUserApplicationNames(guildSettings, member);
 
 
-        dialogHandler.startDialog(guild, channel, member, new Dialog() {
-            private Application application = null;
-            private Release release;
+        dialogHandler.startDialog(guild, channel, member,
+                "Please select a application.\n" + applicationNames,
+                new Dialog() {
+                    private Application application = null;
+                    private Release release;
 
-            @Override
-            public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
-                String content = message.getContentRaw();
-                if (application == null) {
-                    Optional<Application> application = guildSettings.getApplication(content);
-                    if (application.isEmpty()) {
-                        channel.sendMessage("This application does not exist.\n" +
-                                "For which application do you want to delete an update?\n" + applicationNames).queue();
+                    @Override
+                    public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
+                        String content = message.getContentRaw();
+                        if (application == null) {
+                            Optional<Application> application = guildSettings.getApplication(content);
+                            if (application.isEmpty()) {
+                                channel.sendMessage("This application does not exist.\n" +
+                                        "For which application do you want to delete an update?\n" + applicationNames).queue();
+                                return false;
+                            }
+
+                            if (!application.get().isOwner(member)) {
+                                channel.sendMessage("This is not your application.\n" +
+                                        "For which application do you want to delete an update?\n" + applicationNames).queue();
+                                return false;
+                            }
+
+                            this.application = application.get();
+                            channel.sendMessage("You selected " + this.application.getDisplayName() + ".").queue();
+                            String versions = this.application.getReleases(true).stream().map(Release::getVersion).collect(Collectors.joining(", "));
+                            channel.sendMessage("Which version do you want to delete?\n" + versions).queue();
+                            return false;
+                        }
+
+                        if (release == null) {
+                            Optional<Release> optionalRelease = application.getRelease(content);
+                            String versions = this.application.getReleases(true).stream().map(Release::getVersion).collect(Collectors.joining(", "));
+                            if (optionalRelease.isEmpty()) {
+                                channel.sendMessage("Invalid release.\n Which version do you want to delete?\n" + versions).queue();
+                                return false;
+                            }
+                            release = optionalRelease.get();
+                            channel.sendMessage("Attemting to delete release " + release.getVersion() + ".\nPlease confirm by typing \"confirm\"").queue();
+                            return false;
+                        }
+
+                        if ("confirm".equalsIgnoreCase(content)) {
+                            application.deleteRelease(release.getVersion());
+                            channel.sendMessage("Removed version **" + release.getVersion() + "**.").queue();
+                            return true;
+                        }
+                        if ("cancel".equalsIgnoreCase(content)) {
+                            channel.sendMessage("Canceled deletion.").queue();
+                            return true;
+                        }
+
+                        channel.sendMessage("Please write **\"confirm\"** to delete the version **"
+                                + release.getVersion() + "** or **\"cancel\"** to cancel the deletion.").queue();
+                        configuration.save();
                         return false;
                     }
-
-                    if (!application.get().isOwner(member)) {
-                        channel.sendMessage("This is not your application.\n" +
-                                "For which application do you want to delete an update?\n" + applicationNames).queue();
-                        return false;
-                    }
-
-                    this.application = application.get();
-                    channel.sendMessage("You selected " + this.application.getDisplayName() + ".").queue();
-                    String versions = this.application.getReleases(true).stream().map(Release::getVersion).collect(Collectors.joining(", "));
-                    channel.sendMessage("Which version do you want to delete?\n" + versions).queue();
-                    return false;
-                }
-
-                if (release == null) {
-                    Optional<Release> optionalRelease = application.getRelease(content);
-                    String versions = this.application.getReleases(true).stream().map(Release::getVersion).collect(Collectors.joining(", "));
-                    if (optionalRelease.isEmpty()) {
-                        channel.sendMessage("Invalid release.\n Which version do you want to delete?\n" + versions).queue();
-                        return false;
-                    }
-                    release = optionalRelease.get();
-                    channel.sendMessage("Attemting to delete release " + release.getVersion() + ".\nPlease confirm by typing \"confirm\"").queue();
-                    return false;
-                }
-
-                if ("confirm".equalsIgnoreCase(content)) {
-                    application.deleteRelease(release.getVersion());
-                    channel.sendMessage("Removed version **" + release.getVersion() + "**.").queue();
-                    return true;
-                }
-                if ("cancel".equalsIgnoreCase(content)) {
-                    channel.sendMessage("Canceled deletion.").queue();
-                    return true;
-                }
-
-                channel.sendMessage("Please write **\"confirm\"** to delete the version **"
-                        + release.getVersion() + "** or **\"cancel\"** to cancel the deletion.").queue();
-                configuration.save();
-                return false;
-            }
-        });
+                });
     }
 
-    private void setName(TextChannel channel, String[] args, GuildSettings application) {
+    private void setName(TextChannel channel, String[] args, Application application) {
         if (args.length == 1) {
             channel.sendMessage("Please provide a new name.").queue();
             return;
@@ -765,7 +768,7 @@ public class CommandListener extends ListenerAdapter {
         configuration.save();
     }
 
-    private void setDescription(TextChannel channel, String[] args, GuildSettings application) {
+    private void setDescription(TextChannel channel, String[] args, Application application) {
         if (args.length == 1) {
             channel.sendMessage("Please provide a description.").queue();
             return;
@@ -776,7 +779,7 @@ public class CommandListener extends ListenerAdapter {
         configuration.save();
     }
 
-    private void setAlias(TextChannel channel, String[] args, GuildSettings application) {
+    private void setAlias(TextChannel channel, String[] args, Application application) {
         if (args.length == 1) {
             channel.sendMessage("Please provide one or more aliases.").queue();
             return;
@@ -787,7 +790,7 @@ public class CommandListener extends ListenerAdapter {
         configuration.save();
     }
 
-    private void setChannel(TextChannel channel, GenericGuildMessageEvent event, String[] args, GuildSettings application) {
+    private void setChannel(TextChannel channel, GenericGuildMessageEvent event, String[] args, Application application) {
         if (args.length == 1) {
             channel.sendMessage("Please provide a channel.").queue();
             return;

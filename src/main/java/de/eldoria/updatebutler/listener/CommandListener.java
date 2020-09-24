@@ -5,6 +5,10 @@ import de.eldoria.updatebutler.config.Configuration;
 import de.eldoria.updatebutler.config.GuildSettings;
 import de.eldoria.updatebutler.config.Release;
 import de.eldoria.updatebutler.config.ReleaseBuilder;
+import de.eldoria.updatebutler.config.commands.CommandType;
+import de.eldoria.updatebutler.config.commands.EmbedCommand;
+import de.eldoria.updatebutler.config.commands.PlainTextCommand;
+import de.eldoria.updatebutler.config.commands.UserCommand;
 import de.eldoria.updatebutler.dialogue.Dialog;
 import de.eldoria.updatebutler.dialogue.DialogHandler;
 import de.eldoria.updatebutler.util.ArgumentParser;
@@ -26,6 +30,7 @@ import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageUpdateEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.sharding.ShardManager;
+import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nonnull;
@@ -46,14 +51,15 @@ public class CommandListener extends ListenerAdapter {
     private final ArgumentParser parser;
     private final ShardManager shardManager;
     private final String[] userCommands = {"latestVersion", "versions", "versionInfo", "info", "applist"};
-    private final String[] ownerCommands = {"setPrefix", "grant", "revoke", "createApp"};
+    private final String[] ownerCommands = {"setPrefix", "grant", "revoke", "createApp", "createCommand", "removeCommand"};
     private final String[] appCommands = {"deleteApp", "grantAccess", "revokeAccess", "deployUpdate", "deleteUpdate", "setName", "setDescr", "setAlias", "setChannel"};
-    private final DialogHandler dialogHandler = new DialogHandler();
+    private final DialogHandler dialogHandler;
 
     public CommandListener(Configuration configuration, ShardManager shardManager) {
         this.configuration = configuration;
         this.parser = new ArgumentParser(shardManager);
         this.shardManager = shardManager;
+        dialogHandler = new DialogHandler(configuration);
     }
 
     public static boolean isInArray(String s, String... sA) {
@@ -134,7 +140,7 @@ public class CommandListener extends ListenerAdapter {
 
         // Owner Commands
         if (isInArray(label, ownerCommands)) {
-            if (!guildSettings.isAllowedUser(member) && !member.isOwner()) {
+            if (!guildSettings.isAllowedUser(member)) {
                 channel.sendMessage("You are not a bot owner!").queue();
                 return;
             }
@@ -153,6 +159,12 @@ public class CommandListener extends ListenerAdapter {
 
             if ("createApp".equalsIgnoreCase(label)) {
                 createApp(member, channel, guild, guildSettings);
+            }
+            if ("createCommand".equalsIgnoreCase(label)) {
+                createCommand(member, channel, guild, guildSettings);
+            }
+            if ("removeCommand".equalsIgnoreCase(label)) {
+                removeCommand(member, channel, guild, guildSettings);
             }
             return;
         }
@@ -223,18 +235,23 @@ public class CommandListener extends ListenerAdapter {
         }
         Optional<Application> optional = guildSettings.getApplication(label);
 
-        if (optional.isEmpty()) {
-            channel.sendMessage("Invalid command.").queue();
+        if (optional.isPresent()) {
+            channel.sendMessage(optional.get().getApplicationInfo(configuration, event.getGuild(), parser)).queue();
             return;
         }
 
-        channel.sendMessage(optional.get().getApplicationInfo(configuration, event.getGuild(), parser)).queue();
+        Optional<UserCommand> userCommand = guildSettings.getUserCommand(label);
+
+        if (userCommand.isPresent()) {
+            userCommand.get().sendCommandOutput(channel);
+        }
+        //channel.sendMessage("Invalid command.").queue();
     }
+
 
     /*
     PUBLIC COMMANDS START
      */
-
     private void help(Member member, TextChannel channel, GuildSettings guildSettings) {
         EmbedBuilder builder = new EmbedBuilder();
         builder.setTitle("Help");
@@ -250,6 +267,18 @@ public class CommandListener extends ListenerAdapter {
         if (guildSettings.hasApplication(member)) {
             builder.addField("Application Commands:", appCommands, false);
         }
+
+        String customCommands = guildSettings.getUserCommands();
+        String customAppCommands = guildSettings.getApplicationCommands();
+
+        if (!customCommands.isEmpty()) {
+            builder.addField("Custom Commands:", customCommands, false);
+        }
+
+        if (!customAppCommands.isEmpty()) {
+            builder.addField("Applications:", customAppCommands, false);
+        }
+
         channel.sendMessage(builder.build()).queue();
     }
 
@@ -337,13 +366,154 @@ public class CommandListener extends ListenerAdapter {
         channel.sendMessage(releaseInfo).queue();
     }
 
+
     /*
     PUBLIC COMMANDS END
      */
-
     /*
     OWNER COMMANDS START
      */
+
+    private void createCommand(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
+        dialogHandler.startDialog(guild, channel, member, "Please enter the command name.", new Dialog() {
+            private String command = null;
+            private UserCommand userCommand = null;
+            private CommandType commandType = null;
+
+            private EmbedCommand.Builder builder;
+            private boolean fieldCreation = false;
+            private String title;
+            private String text;
+
+            @Override
+            public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
+                String content = message.getContentRaw();
+                if (command == null && userCommand == null) {
+                    if (content.contains(" ")) {
+                        channel.sendMessage("Commands can't have spaces.").queue();
+                        return false;
+                    }
+
+                    Optional<UserCommand> userCommand = guildSettings.getUserCommand(content);
+                    if (userCommand.isPresent()) {
+                        channel.sendMessage("This command already exist and will be edited.\nPlease choose the command type: **plain** or **embed**").queue();
+                        this.userCommand = userCommand.get();
+                    } else {
+                        command = content;
+                        channel.sendMessage("Command set to: **" + content + "**.\nPlease choose the command type: **plain** or **embed**").queue();
+                    }
+                    return false;
+                }
+
+                if (commandType == null) {
+                    CommandType enumIgnoreCase = EnumUtils.getEnumIgnoreCase(CommandType.class, content);
+                    if (enumIgnoreCase == null) {
+                        channel.sendMessage("Invalid input.\n.Please choose the command type: **plain** or **embed**").queue();
+                        return false;
+                    }
+                    commandType = enumIgnoreCase;
+                    if (commandType == CommandType.PLAIN) {
+                        channel.sendMessage("Creating new plain text command.\nPlease enter the text which should be send.").queue();
+                    } else {
+                        channel.sendMessage("Creating new embed text command.\nPlease enter the embed title.").queue();
+                        builder = new EmbedCommand.Builder(this.command == null ? userCommand.getCommand() : this.command);
+                    }
+                    return false;
+                }
+
+                if (commandType == CommandType.PLAIN) {
+                    PlainTextCommand command = new PlainTextCommand(this.command == null ? userCommand.getCommand() : this.command, content);
+                    guildSettings.addUserCommand(command);
+                    channel.sendMessage("Command **" + command.getCommand() + "** created.\nOutput:").queue();
+                    command.sendCommandOutput(channel);
+                    return true;
+                } else {
+                    if (builder.getTitle() == null) {
+                        builder.setTitle(content);
+                        channel.sendMessage("Title set to: **" + content + "**.\nPlease enter a description or \"none\".").queue();
+                        return false;
+                    }
+                    if (builder.getDescr() == null) {
+                        if (content.equalsIgnoreCase("none")) {
+                            builder.setDescr("");
+                            channel.sendMessage("No description set.").queue();
+                        } else {
+                            builder.setDescr(content);
+                            channel.sendMessage("Description set to:\n" + content).queue();
+                        }
+                        channel.sendMessage("Do you want to add a field? **yes/no**").queue();
+                        return false;
+                    }
+                    if (!fieldCreation) {
+                        if ("yes".equalsIgnoreCase(content)) {
+                            fieldCreation = true;
+                            channel.sendMessage("Please enter a field title.").queue();
+                            return false;
+                        }
+                        if ("no".equalsIgnoreCase(content)) {
+                            EmbedCommand command = builder.build();
+                            guildSettings.addUserCommand(command);
+                            channel.sendMessage("Command **" + command.getCommand() + "** created.\nOutput:").queue();
+                            command.sendCommandOutput(channel);
+                            return true;
+                        }
+                        channel.sendMessage("Do you want to add a field? **yes/no**").queue();
+                    } else {
+                        if (title == null) {
+                            title = content;
+                            channel.sendMessage("Field title set to: **" + content + "**.\nPlease enter the field text.").queue();
+                            return false;
+                        }
+                        if (text == null) {
+                            text = content;
+                            channel.sendMessage("Text set to:\n" + content + "\nShould this field be inline? **yes/no**").queue();
+                            return false;
+                        }
+                        Optional<Boolean> aBoolean = ArgumentParser.parseBoolean(content, "yes", "no");
+                        if (aBoolean.isPresent()) {
+                            boolean inline = aBoolean.get();
+                            if (inline) {
+                                channel.sendMessage("New inline field added.").queue();
+                            } else {
+                                channel.sendMessage("New field added.").queue();
+                            }
+                            builder.addField(new EmbedCommand.EmbedField(title, text, inline));
+                            text = null;
+                            title = null;
+                            fieldCreation = false;
+                            channel.sendMessage("Do you want to add another field? **yes/no**").queue();
+                        } else {
+                            channel.sendMessage("Invalid Input\nShould this field be inline? **yes/no**").queue();
+                        }
+                    }
+                    return false;
+                }
+            }
+        });
+    }
+
+    private void removeCommand(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
+        String userCommands = guildSettings.getUserCommands();
+        dialogHandler.startDialog(guild, channel, member, "Which command do you want to remove?\n" + userCommands, new Dialog() {
+            private String command = null;
+            private UserCommand userCommand = null;
+
+            @Override
+            public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
+                String content = message.getContentRaw();
+                Optional<UserCommand> userCommand = guildSettings.getUserCommand(content);
+
+                if (userCommand.isEmpty()) {
+                    channel.sendMessage("Invalid command.\nWhich command do you want to remove?\n" + userCommands).queue();
+                    return false;
+                }
+                guildSettings.removeCommand(userCommand.get());
+                channel.sendMessage("Command " + userCommand.get().getCommand() + " removed.").queue();
+                return true;
+            }
+        });
+    }
+
     private void setPrefix(TextChannel channel, GuildSettings guildSettings, String[] args) {
         if (args.length != 1) {
             channel.sendMessage("setPrefix <prefix>").queue();

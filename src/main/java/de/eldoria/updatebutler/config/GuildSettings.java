@@ -2,14 +2,18 @@ package de.eldoria.updatebutler.config;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import de.eldoria.updatebutler.config.commands.UserCommand;
 import lombok.Getter;
 import lombok.Setter;
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @Getter
@@ -21,10 +25,13 @@ public class GuildSettings {
     @Expose
     private Set<Long> allowedUsers = new HashSet<>();
     @Expose
-    private HashMap<String, Application> applications = new HashMap<>();
+    private Map<String, Application> applications = new HashMap<>();
 
-    public boolean isAllowedUser(Member user) {
-        return allowedUsers.contains(user.getIdLong());
+    @Expose
+    private Set<UserCommand> userCommands = new HashSet<>();
+
+    public boolean isAllowedUser(Member member) {
+        return allowedUsers.contains(member.getIdLong()) || member.isOwner() || member.hasPermission(Permission.ADMINISTRATOR);
     }
 
     public boolean addAllowedUser(Member user) {
@@ -78,5 +85,31 @@ public class GuildSettings {
             if (value.isOwner(member)) return true;
         }
         return false;
+    }
+
+    public Optional<UserCommand> getUserCommand(String string) {
+        return userCommands.stream().filter(s -> s.isCommand(string)).findFirst();
+    }
+
+    public void addUserCommand(UserCommand command) {
+        removeCommand(command);
+        userCommands.add(command);
+    }
+
+    public void removeCommand(UserCommand command) {
+        userCommands.remove(command);
+    }
+
+    public String getUserCommands() {
+        if (userCommands.isEmpty()) return "";
+        return userCommands.stream().map(c -> "`" + c.getCommand() + "`").collect(Collectors.joining(", "));
+    }
+
+    public String getApplicationCommands() {
+        return applications.values()
+                .stream()
+                .map(a -> "`" + a.getIdentifier()
+                        + (a.getAlias().length != 0 ? " (" + String.join(", ", a.getAlias()) + ")" : "") + "`")
+                .collect(Collectors.joining(", "));
     }
 }

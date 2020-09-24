@@ -82,7 +82,7 @@ public class UpdatesAPI {
                 return HttpStatusCodes.STATUS_CODE_OK;
             }
 
-            Release latestRelease;
+            Optional<Release> latestRelease;
 
             if (updatePayload.isAllowDevBuilds()) {
                 latestRelease = application.get().getLatestVersion();
@@ -90,12 +90,19 @@ public class UpdatesAPI {
                 latestRelease = application.get().getLatestStableVersion();
             }
 
-            if (latestRelease.getPublished().isAfter(optionalRelease.get().getPublished())) {
-                response.body(GSON.toJson(new UpdateCheckResponse(true, latestRelease.getVersion(), latestRelease.getChecksum())));
+            if (latestRelease.isEmpty()) {
+                response.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND);
+                return HttpStatusCodes.STATUS_CODE_NOT_FOUND + " This release does not exist";
+            }
+
+            Release release = latestRelease.get();
+
+            if (release.getPublished().isAfter(optionalRelease.get().getPublished())) {
+                response.body(GSON.toJson(new UpdateCheckResponse(true, release.getVersion(), release.getChecksum())));
                 return HttpStatusCodes.STATUS_CODE_OK;
             }
 
-            response.body(GSON.toJson(new UpdateCheckResponse(false, latestRelease.getVersion(), latestRelease.getChecksum())));
+            response.body(GSON.toJson(new UpdateCheckResponse(false, release.getVersion(), release.getChecksum())));
             return HttpStatusCodes.STATUS_CODE_OK;
         })));
 

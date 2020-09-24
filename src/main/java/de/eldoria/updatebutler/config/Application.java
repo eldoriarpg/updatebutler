@@ -134,7 +134,7 @@ public class Application {
                 .setTitle("#" + id + " " + getDisplayName() + " " + release.getVersion())
                 .setDescription(release.getTitle())
                 .addField("Patchnotes", release.getPatchnotes(), false)
-                .addField("Owner", owner, true)
+                .addField("Stable", release.isDevBuild() ? "dev":"stable", true)
                 .addField("Download", configuration.getHostName() + "/download?id=" + id + "&version=" + release.getVersion().replace(" ", "_"), true)
                 .addField("Checksum Sha256", release.getChecksum(), true)
                 .setTimestamp(release.getPublished());

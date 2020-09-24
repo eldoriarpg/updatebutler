@@ -5,6 +5,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.stream.JsonReader;
+import de.eldoria.updatebutler.config.commands.UserCommand;
+import de.eldoria.updatebutler.config.commands.UserCommandAdapter;
 import de.eldoria.updatebutler.listener.ReleaseCreateListener;
 import de.eldoria.updatebutler.util.FileUtil;
 import lombok.Getter;
@@ -23,7 +25,12 @@ import static de.eldoria.updatebutler.util.FileUtil.home;
 @Slf4j
 public class Configuration {
 
-    private static final Gson GSON = new GsonBuilder().serializeNulls().excludeFieldsWithoutExposeAnnotation().setPrettyPrinting().create();
+    private static final Gson GSON = new GsonBuilder()
+            .serializeNulls()
+            .excludeFieldsWithoutExposeAnnotation()
+            .setPrettyPrinting()
+            .registerTypeAdapter(UserCommand.class, new UserCommandAdapter())
+            .create();
     private ReleaseCreateListener listener;
     @Getter
     @Expose
@@ -53,7 +60,7 @@ public class Configuration {
         try (var in = ClassLoader.getSystemClassLoader().getResourceAsStream("config.json")) {
             var file = FileUtil.createFile(in, "/config/config.json");
             try (JsonReader reader = new JsonReader(new FileReader(file))) {
-                return new Gson().fromJson(reader, Configuration.class);
+                return GSON.fromJson(reader, Configuration.class);
             }
         }
     }

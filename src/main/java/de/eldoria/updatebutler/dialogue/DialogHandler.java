@@ -1,5 +1,6 @@
 package de.eldoria.updatebutler.dialogue;
 
+import de.eldoria.updatebutler.config.Configuration;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
@@ -11,6 +12,11 @@ import java.util.Map;
 public class DialogHandler {
     // Guild -> Channel -> User -> Dialogue
     private final Map<Long, Map<Long, Map<Long, Dialog>>> dialogs = new HashMap<>();
+    private final Configuration configuration;
+
+    public DialogHandler(Configuration configuration) {
+        this.configuration = configuration;
+    }
 
     public void invoke(Guild guild, TextChannel channel, Member member, Message message) {
         String content = message.getContentRaw();
@@ -24,6 +30,7 @@ public class DialogHandler {
         if (dialog != null) {
             if (dialog.invoke(guild, channel, member, message)) {
                 removeDialog(guild, channel, member);
+                configuration.save();
             }
         }
     }

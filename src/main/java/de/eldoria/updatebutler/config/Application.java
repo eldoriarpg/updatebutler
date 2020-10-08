@@ -167,7 +167,7 @@ public class Application {
         if (optionalRelease.isPresent()) {
             Release release = optionalRelease.get();
             builder.addField("Latest Version", release.getVersion(), true)
-                    .addField("Download", configuration.getHost() + release.getFile(), true)
+                    .addField("Download", configuration.getHostName() + "/download?id=" + id + "&version=" + release.getVersion().replace(" ", "_"), true)
                     .addField("Checksum Sha256", release.getChecksum(), true);
             builder.setTimestamp(release.getPublished());
         }

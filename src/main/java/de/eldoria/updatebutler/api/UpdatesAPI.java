@@ -66,25 +66,34 @@ public class UpdatesAPI {
         });
 
         get("/check", (((request, response) -> {
-            UpdateCheckPayload updatePayload = GSON.fromJson(request.body(), UpdateCheckPayload.class);
+            int id;
+            try {
+                id = Integer.parseInt(request.queryParams("id"));
+            } catch (NumberFormatException e) {
+                response.body("Invalid number");
+                return HttpStatusCodes.STATUS_CODE_BAD_REQUEST;
+            }
+            String version = request.queryParams("version");
+            boolean devBuild = Boolean.parseBoolean(request.queryParams("devbuild"));
 
-            Optional<Application> application = configuration.getApplicationById(updatePayload.getApplicationId());
+            Optional<Application> application = configuration.getApplicationById(id);
 
             if (application.isEmpty()) {
                 response.body(GSON.toJson(new UpdateCheckResponse(false, null, null)));
+                response.status(HttpStatusCodes.STATUS_CODE_BAD_REQUEST);
                 return HttpStatusCodes.STATUS_CODE_BAD_REQUEST;
             }
 
-            Optional<Release> optionalRelease = application.get().getRelease(updatePayload.getVersion());
+            Optional<Release> optionalRelease = application.get().getRelease(version);
 
             if (optionalRelease.isEmpty()) {
-                response.body(GSON.toJson(new UpdateCheckResponse(false, null, null)));
-                return HttpStatusCodes.STATUS_CODE_OK;
+                response.status(HttpStatusCodes.STATUS_CODE_OK);
+                return GSON.toJson(new UpdateCheckResponse(false, null, null));
             }
 
             Optional<Release> latestRelease;
 
-            if (updatePayload.isAllowDevBuilds()) {
+            if (devBuild) {
                 latestRelease = application.get().getLatestVersion();
             } else {
                 latestRelease = application.get().getLatestStableVersion();
@@ -98,20 +107,12 @@ public class UpdatesAPI {
             Release release = latestRelease.get();
 
             if (release.getPublished().isAfter(optionalRelease.get().getPublished())) {
-                response.body(GSON.toJson(new UpdateCheckResponse(true, release.getVersion(), release.getChecksum())));
-                return HttpStatusCodes.STATUS_CODE_OK;
+                return GSON.toJson(new UpdateCheckResponse(true, release.getVersion(), release.getChecksum()));
             }
 
-            response.body(GSON.toJson(new UpdateCheckResponse(false, release.getVersion(), release.getChecksum())));
-            return HttpStatusCodes.STATUS_CODE_OK;
+            return GSON.toJson(new UpdateCheckResponse(false, release.getVersion(), release.getChecksum()));
         })));
-
-        get("/update", (((request, response) -> {
-            UpdateCheckPayload updatePayload = GSON.fromJson(request.body(), UpdateCheckPayload.class);
-
-            return getOutputFileStream(request, response, updatePayload.getApplicationId(), updatePayload.getVersion());
-        })));
-
+        
         get("/download", ((request, response) -> {
             try {
                 return getOutputFileStream(request, response, Integer.parseInt(request.queryParams("id")),

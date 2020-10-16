@@ -3,16 +3,20 @@ package de.eldoria.updatebutler.config;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import de.eldoria.updatebutler.config.commands.UserCommand;
+import de.eldoria.updatebutler.config.phrase.Phrase;
 import lombok.Getter;
 import lombok.Setter;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 
@@ -29,6 +33,8 @@ public class GuildSettings {
 
     @Expose
     private Set<UserCommand> userCommands = new HashSet<>();
+    @Expose
+    private List<Phrase> phrases = new ArrayList<>();
 
     public boolean isAllowedUser(Member member) {
         return allowedUsers.contains(member.getIdLong()) || member.isOwner() || member.hasPermission(Permission.ADMINISTRATOR);
@@ -111,5 +117,27 @@ public class GuildSettings {
                 .map(a -> "`" + a.getIdentifier()
                         + (a.getAlias().length != 0 ? " (" + String.join(", ", a.getAlias()) + ")" : "") + "`")
                 .collect(Collectors.joining(", "));
+    }
+
+    public void addPhrase(Phrase phrase) {
+        phrases.add(phrase);
+    }
+
+    public Optional<Phrase> removePhrase(int index) {
+        if (index >= phrases.size()) return Optional.empty();
+        Phrase phrase = phrases.get(index);
+        phrases.remove(index);
+        return Optional.ofNullable(phrase);
+    }
+
+    public String getPhrases() {
+        AtomicInteger integer = new AtomicInteger(0);
+        return phrases.stream()
+                .map(a -> integer.incrementAndGet() + " (" +  a.getCommand() + ")```" + a.getPhrase() + "```")
+                .collect(Collectors.joining("\n"));
+    }
+
+    public Optional<Phrase> matchPhrase(String content) {
+        return phrases.stream().filter(p -> p.matches(content)).findFirst();
     }
 }

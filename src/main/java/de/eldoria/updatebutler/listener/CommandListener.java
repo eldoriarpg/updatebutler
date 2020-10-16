@@ -7,8 +7,12 @@ import de.eldoria.updatebutler.config.Release;
 import de.eldoria.updatebutler.config.ReleaseBuilder;
 import de.eldoria.updatebutler.config.commands.CommandType;
 import de.eldoria.updatebutler.config.commands.EmbedCommand;
-import de.eldoria.updatebutler.config.commands.PlainTextCommand;
+import de.eldoria.updatebutler.config.commands.PlainCommand;
 import de.eldoria.updatebutler.config.commands.UserCommand;
+import de.eldoria.updatebutler.config.phrase.Phrase;
+import de.eldoria.updatebutler.config.phrase.PhraseType;
+import de.eldoria.updatebutler.config.phrase.PlainPhrase;
+import de.eldoria.updatebutler.config.phrase.RegexPhrase;
 import de.eldoria.updatebutler.dialogue.Dialog;
 import de.eldoria.updatebutler.dialogue.DialogHandler;
 import de.eldoria.updatebutler.util.ArgumentParser;
@@ -39,6 +43,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -50,7 +55,7 @@ public class CommandListener extends ListenerAdapter {
     private final Configuration configuration;
     private final ArgumentParser parser;
     private final String[] userCommands = {"latestVersion", "versions", "versionInfo", "info", "applist"};
-    private final String[] ownerCommands = {"setPrefix", "grant", "revoke", "createApp", "createCommand", "removeCommand"};
+    private final String[] ownerCommands = {"setPrefix", "grant", "revoke", "createApp", "createCommand", "removeCommand", "createPhrase", "removePhrase", "listPhrase"};
     private final String[] appCommands = {"deleteApp", "grantAccess", "revokeAccess", "deployUpdate", "deleteUpdate", "setName", "setDescr", "setAlias", "setChannel"};
     private final DialogHandler dialogHandler;
 
@@ -78,6 +83,7 @@ public class CommandListener extends ListenerAdapter {
     }
 
     public void handleMessage(Member member, TextChannel channel, Guild guild, Message message, GenericGuildMessageEvent event) {
+        if (member.getUser().isBot()) return;
 
         GuildSettings guildSettings = configuration.getGuildSettings(guild.getId());
 
@@ -86,7 +92,12 @@ public class CommandListener extends ListenerAdapter {
         String[] args = receivedMessage.split(" ");
 
         if (!isCommand(receivedMessage, args, guildSettings, event)) {
-            dialogHandler.invoke(guild, channel, member, message);
+            if (dialogHandler.invoke(guild, channel, member, message)) {
+                return;
+            }
+            guildSettings.matchPhrase(receivedMessage)
+                    .flatMap(p -> guildSettings.getUserCommand(p.getCommand()))
+                    .ifPresent(c -> c.sendCommandOutput(channel));
             return;
         }
 
@@ -163,6 +174,15 @@ public class CommandListener extends ListenerAdapter {
             }
             if ("removeCommand".equalsIgnoreCase(label)) {
                 removeCommand(member, channel, guild, guildSettings);
+            }
+            if ("createPhrase".equalsIgnoreCase(label)) {
+                createPhrase(member, channel, guild, guildSettings);
+            }
+            if ("removePhrase".equalsIgnoreCase(label)) {
+                removePhrase(member, channel, guild, guildSettings);
+            }
+            if ("listPhrase".equalsIgnoreCase(label)) {
+                listPhrase(member, channel, guild, guildSettings);
             }
             return;
         }
@@ -247,9 +267,11 @@ public class CommandListener extends ListenerAdapter {
     }
 
 
+
     /*
     PUBLIC COMMANDS START
      */
+
     private void help(Member member, TextChannel channel, GuildSettings guildSettings) {
         EmbedBuilder builder = new EmbedBuilder();
         builder.setTitle("Help");
@@ -371,7 +393,6 @@ public class CommandListener extends ListenerAdapter {
     /*
     OWNER COMMANDS START
      */
-
     private void createCommand(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
         dialogHandler.startDialog(guild, channel, member, "Please enter the command name.", new Dialog() {
             private String command = null;
@@ -420,7 +441,7 @@ public class CommandListener extends ListenerAdapter {
                 }
 
                 if (commandType == CommandType.PLAIN) {
-                    PlainTextCommand command = new PlainTextCommand(this.command == null ? userCommand.getCommand() : this.command, content);
+                    PlainCommand command = new PlainCommand(this.command == null ? userCommand.getCommand() : this.command, content);
                     guildSettings.addUserCommand(command);
                     channel.sendMessage("Command **" + command.getCommand() + "** created.\nOutput:").queue();
                     command.sendCommandOutput(channel);
@@ -506,10 +527,125 @@ public class CommandListener extends ListenerAdapter {
                     return false;
                 }
                 guildSettings.removeCommand(userCommand.get());
-                channel.sendMessage("Command " + userCommand.get().getCommand() + " removed.").queue();
+                channel.sendMessage("Command **" + userCommand.get().getCommand() + "** removed.").queue();
                 return true;
             }
         });
+    }
+
+    private void createPhrase(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
+        dialogHandler.startDialog(guild, channel, member, "Choose match type: **regex/plain**.",
+                new Dialog() {
+                    private PhraseType phraseType = null;
+                    private String phrase = null;
+                    private Boolean caseSensitive = null;
+                    private String command = null;
+
+                    @Override
+                    public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
+                        String content = message.getContentRaw();
+                        if (phraseType == null) {
+                            phraseType = EnumUtils.getEnumIgnoreCase(PhraseType.class, content);
+                            if (phraseType == null) {
+                                channel.sendMessage("Invalid match type.\nChoose match type: **regex/plain**.").queue();
+                                return false;
+                            }
+                            channel.sendMessage("Phrase type set to: **" + phraseType + "**").queue();
+                            if (phraseType == PhraseType.PLAIN) {
+                                channel.sendMessage("Should the phrase be case sentitive? **yes|no**").queue();
+                            } else if (phraseType == PhraseType.REGEX) {
+                                channel.sendMessage("Please enter a regex pattern.").queue();
+                            }
+                            return false;
+                        }
+
+                        switch (phraseType) {
+                            case PLAIN:
+                                if (caseSensitive == null) {
+                                    Optional<Boolean> aBoolean = ArgumentParser.parseBoolean(content, "yes", "no");
+                                    if (aBoolean.isEmpty()) {
+                                        channel.sendMessage("Invalid Input.\n"
+                                                + "Should the phrase be case sentitive? **yes|no**").queue();
+                                        return false;
+                                    }
+                                    caseSensitive = aBoolean.get();
+                                    if (caseSensitive) {
+                                        channel.sendMessage("Matching will be case sensitive").queue();
+                                    } else {
+                                        channel.sendMessage("Matching will **NOT** be case sensitive").queue();
+                                    }
+                                    channel.sendMessage("Please enter a phrase to match.").queue();
+                                    return false;
+                                }
+                                if (phrase == null) {
+                                    phrase = content;
+                                    String applicationCommands = guildSettings.getUserCommands();
+                                    channel.sendMessage("Phrase set to: ```" + phrase
+                                            + "``` Please enter a command which should be used as response:\n"
+                                            + applicationCommands).queue();
+                                    return false;
+                                }
+                                break;
+                            case REGEX:
+                                if (phrase == null) {
+                                    phrase = content;
+                                    String applicationCommands = guildSettings.getUserCommands();
+                                    channel.sendMessage("Regex set to: ```" + phrase
+                                            + "``` Please enter a command which should be used as response:\n"
+                                            + applicationCommands).queue();
+                                    return false;
+                                }
+                                break;
+                        }
+
+                        if (command == null) {
+                            Optional<UserCommand> userCommand = guildSettings.getUserCommand(content);
+                            if (userCommand.isEmpty()) {
+                                String applicationCommands = guildSettings.getUserCommands();
+                                channel.sendMessage("Invalid command\n"
+                                        + "Please enter a command which should be used as response:\n"
+                                        + applicationCommands).queue();
+                                return false;
+                            }
+                            switch (phraseType) {
+                                case REGEX:
+                                    guildSettings.addPhrase(new RegexPhrase(phrase, userCommand.get().getCommand()));
+                                    channel.sendMessage("New regex phrase created.").queue();
+                                    break;
+                                case PLAIN:
+                                    guildSettings.addPhrase(new PlainPhrase(phrase, userCommand.get().getCommand(), caseSensitive));
+                                    channel.sendMessage("New plain phrase created.").queue();
+                                    break;
+                            }
+                            return true;
+                        }
+                        return false;
+                    }
+                });
+    }
+
+    private void removePhrase(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
+        dialogHandler.startDialog(guild, channel, member,
+                "Which phrase do you want to remove? Please write the number.\n" + guildSettings.getPhrases(),
+                (g, ch, mem, mes) -> {
+                    String content = mes.getContentRaw();
+                    OptionalInt optionalInt = ArgumentParser.parseInt(content);
+                    if (optionalInt.isEmpty()) {
+                        ch.sendMessage("This is not a number.\nPlease use the number of the phrase.").queue();
+                        return false;
+                    }
+                    Optional<Phrase> phrase = guildSettings.removePhrase(optionalInt.getAsInt() - 1);
+                    if (phrase.isEmpty()) {
+                        ch.sendMessage("Invalid phrase number.").queue();
+                        return false;
+                    }
+                    ch.sendMessage("Phrase ```" + phrase.get().getPhrase() + "``` removed.").queue();
+                    return true;
+                });
+    }
+
+    private void listPhrase(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
+        channel.sendMessage("Registered Phrases:\n" + guildSettings.getPhrases()).queue();
     }
 
     private void setPrefix(TextChannel channel, GuildSettings guildSettings, String[] args) {
@@ -635,10 +771,10 @@ public class CommandListener extends ListenerAdapter {
                 });
     }
 
+
     /*
     OWNER COMMANDS END
      */
-
     /*
     APPLICATION COMMANDS START
      */
@@ -958,7 +1094,8 @@ public class CommandListener extends ListenerAdapter {
         configuration.save();
     }
 
-    private void setChannel(TextChannel channel, GenericGuildMessageEvent event, String[] args, Application application) {
+    private void setChannel(TextChannel channel, GenericGuildMessageEvent event, String[] args, Application
+            application) {
         if (args.length == 1) {
             channel.sendMessage("Please provide a channel.").queue();
             return;

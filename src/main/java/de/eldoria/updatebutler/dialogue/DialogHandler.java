@@ -18,12 +18,25 @@ public class DialogHandler {
         this.configuration = configuration;
     }
 
-    public void invoke(Guild guild, TextChannel channel, Member member, Message message) {
+    /**
+     * Invoke a dialog in this context.
+     *
+     * @param guild   guild of message
+     * @param channel channel of message
+     * @param member  member of message
+     * @param message message of member
+     *
+     * @return true if a dialog was invoked.
+     */
+    public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
         String content = message.getContentRaw();
         if ("exit".equalsIgnoreCase(content) || "cancel".equalsIgnoreCase(content)) {
-            removeDialog(guild, channel, member);
-            channel.sendMessage("Canceled.").queue();
-            return;
+            if (removeDialog(guild, channel, member)) {
+                channel.sendMessage("Canceled.").queue();
+            } else {
+                channel.sendMessage("No dialog in progress.").queue();
+            }
+            return true;
         }
 
         Dialog dialog = getDialog(guild, channel, member);
@@ -32,7 +45,9 @@ public class DialogHandler {
                 removeDialog(guild, channel, member);
                 configuration.save();
             }
+            return true;
         }
+        return false;
     }
 
     public boolean dialogInProgress(Guild guild, TextChannel channel, Member member) {

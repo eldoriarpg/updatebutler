@@ -6,7 +6,8 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.stream.JsonReader;
 import de.eldoria.updatebutler.config.commands.UserCommand;
-import de.eldoria.updatebutler.config.commands.UserCommandAdapter;
+import de.eldoria.updatebutler.config.phrase.Phrase;
+import de.eldoria.updatebutler.config.util.GsonAdapter;
 import de.eldoria.updatebutler.listener.ReleaseCreateListener;
 import de.eldoria.updatebutler.util.FileUtil;
 import lombok.Getter;
@@ -29,7 +30,10 @@ public class Configuration {
             .serializeNulls()
             .excludeFieldsWithoutExposeAnnotation()
             .setPrettyPrinting()
-            .registerTypeAdapter(UserCommand.class, new UserCommandAdapter())
+            .registerTypeAdapter(UserCommand.class,
+                    new GsonAdapter<UserCommand>("de.eldoria.updatebutler.config.commands"))
+            .registerTypeAdapter(Phrase.class,
+                    new GsonAdapter<Phrase>("de.eldoria.updatebutler.config.phrase"))
             .create();
     private ReleaseCreateListener listener;
     @Getter

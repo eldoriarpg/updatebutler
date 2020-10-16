@@ -33,8 +33,6 @@ public class DialogHandler {
         if ("exit".equalsIgnoreCase(content) || "cancel".equalsIgnoreCase(content)) {
             if (removeDialog(guild, channel, member)) {
                 channel.sendMessage("Canceled.").queue();
-            } else {
-                channel.sendMessage("No dialog in progress.").queue();
             }
             return true;
         }

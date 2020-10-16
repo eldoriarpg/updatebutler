@@ -112,7 +112,7 @@ public class UpdatesAPI {
 
             return GSON.toJson(new UpdateCheckResponse(false, release.getVersion(), release.getChecksum()));
         })));
-        
+
         get("/download", ((request, response) -> {
             try {
                 return getOutputFileStream(request, response, Integer.parseInt(request.queryParams("id")),

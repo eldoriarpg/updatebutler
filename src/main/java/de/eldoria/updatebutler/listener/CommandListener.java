@@ -49,7 +49,6 @@ public class CommandListener extends ListenerAdapter {
     private static final Pattern ID_PATTERN = Pattern.compile("(?:<[@#!&]{1,2})?(?<id>[0-9]{18})(?:>)?");
     private final Configuration configuration;
     private final ArgumentParser parser;
-    private final ShardManager shardManager;
     private final String[] userCommands = {"latestVersion", "versions", "versionInfo", "info", "applist"};
     private final String[] ownerCommands = {"setPrefix", "grant", "revoke", "createApp", "createCommand", "removeCommand"};
     private final String[] appCommands = {"deleteApp", "grantAccess", "revokeAccess", "deployUpdate", "deleteUpdate", "setName", "setDescr", "setAlias", "setChannel"};
@@ -58,7 +57,6 @@ public class CommandListener extends ListenerAdapter {
     public CommandListener(Configuration configuration, ShardManager shardManager) {
         this.configuration = configuration;
         this.parser = new ArgumentParser(shardManager);
-        this.shardManager = shardManager;
         dialogHandler = new DialogHandler(configuration);
     }
 

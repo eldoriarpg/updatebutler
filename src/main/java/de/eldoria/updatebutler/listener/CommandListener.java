@@ -1104,6 +1104,7 @@ public class CommandListener extends ListenerAdapter {
         if("none".equalsIgnoreCase(args[1])){
             application.setChannel(null);
             channel.sendMessage("Removed update channel.").queue();
+            return;
         }
 
         Optional<TextChannel> textChannel = ArgumentParser.getTextChannel(event.getGuild(), args[1]);

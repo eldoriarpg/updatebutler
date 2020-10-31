@@ -118,3 +118,5 @@ target/
 /config/
 /logs/
 /resources
+
+.idea/$CACHE_FILE$

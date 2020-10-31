@@ -1101,6 +1101,11 @@ public class CommandListener extends ListenerAdapter {
             return;
         }
 
+        if("none".equalsIgnoreCase(args[1])){
+            application.setChannel(null);
+            channel.sendMessage("Removed update channel.").queue();
+        }
+
         Optional<TextChannel> textChannel = ArgumentParser.getTextChannel(event.getGuild(), args[1]);
         if (textChannel.isEmpty()) {
             channel.sendMessage("Invalid channel.").queue();
@@ -1108,6 +1113,7 @@ public class CommandListener extends ListenerAdapter {
         }
 
         application.setChannel(textChannel.get().getIdLong());
+        channel.sendMessage("Set channel to " + textChannel.get().getAsMention()).queue();
         configuration.save();
     }
 

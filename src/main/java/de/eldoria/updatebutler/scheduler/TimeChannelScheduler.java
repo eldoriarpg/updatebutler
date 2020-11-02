@@ -15,7 +15,7 @@ import java.util.Map;
 public class TimeChannelScheduler implements Runnable {
     private final ShardManager manager;
     private final Configuration configuration;
-    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("H:m");
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
 
     public TimeChannelScheduler(ShardManager manager, Configuration configuration) {
         this.manager = manager;

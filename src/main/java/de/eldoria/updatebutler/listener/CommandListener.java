@@ -315,7 +315,7 @@ public class CommandListener extends ListenerAdapter {
 
                 guildSettings.setTimeZone(zone);
                 guildSettings.setTimeChannel(id);
-                channel.sendMessage("Timezone set. Channel will be updated automatically. In the next minute").queue();
+                channel.sendMessage("Timezone set. Channel will be updated automatically. In the next 5 minutes").queue();
                 return true;
             }
         });

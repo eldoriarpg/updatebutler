@@ -116,7 +116,7 @@ public class UpdatesAPI {
 
         post("/download", ((request, response) -> {
             response.status(HttpStatusCodes.STATUS_CODE_OK);
-            return "Please reload to download";
+            return "<a href=\"" + configuration.getHostName() + "/download?" + request.queryString() + "\">Click here to download.</a>";
         }));
 
         get("/download", ((request, response) -> {

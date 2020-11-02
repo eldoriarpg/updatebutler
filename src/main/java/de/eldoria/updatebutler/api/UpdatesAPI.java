@@ -210,6 +210,7 @@ public class UpdatesAPI {
         }
 
         optionalRelease.get().downloaded();
+        configuration.save();
         log.debug("Delivered release {}", optionalRelease.get().getVersion());
         response.status(HttpStatusCodes.STATUS_CODE_OK);
 

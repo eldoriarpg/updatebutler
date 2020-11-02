@@ -14,11 +14,8 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag;
 
 import javax.security.auth.login.LoginException;
 import java.io.IOException;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoField;
-import java.time.temporal.TemporalField;
-import java.time.temporal.TemporalUnit;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -49,10 +46,13 @@ public final class UpdateButler {
         updatesAPI = new UpdatesAPI(configuration);
         configuration.setReleaseListener(
                 new ReleaseCreateListener(configuration, shardManager, new ArgumentParser(shardManager)));
-        int min = 15 - (LocalDateTime.now().get(ChronoField.MINUTE_OF_HOUR) % 15);
+        int min = 15 - (LocalDateTime.now().get(ChronoField.MINUTE_OF_HOUR) % 15) -1 ;
+        if (min < 1) {
+            min = 14;
+        }
         int sec = 60 - (LocalDateTime.now().get(ChronoField.SECOND_OF_MINUTE));
         log.info("Next time channel update in {} min {} sec", min, sec);
-        executorService.scheduleAtFixedRate(new TimeChannelScheduler(shardManager, configuration), min * 60 + sec, 60*15, TimeUnit.SECONDS);
+        executorService.scheduleAtFixedRate(new TimeChannelScheduler(shardManager, configuration), min * 60 + sec, 60 * 15, TimeUnit.SECONDS);
     }
 
     public static void main(String[] args) throws LoginException, IOException {
@@ -65,9 +65,10 @@ public final class UpdateButler {
                         configuration.getToken(),
                         GatewayIntent.DIRECT_MESSAGES,
                         GatewayIntent.GUILD_MEMBERS,
-                        GatewayIntent.GUILD_MESSAGES)
+                        GatewayIntent.GUILD_MESSAGES,
+                        GatewayIntent.GUILD_EMOJIS)
                 .setMaxReconnectDelay(60)
-                .disableCache(CacheFlag.ACTIVITY, CacheFlag.CLIENT_STATUS)
+                .disableCache(CacheFlag.ACTIVITY, CacheFlag.CLIENT_STATUS, CacheFlag.VOICE_STATE)
                 .enableCache(CacheFlag.MEMBER_OVERRIDES)
                 .setBulkDeleteSplittingEnabled(false)
                 .build();

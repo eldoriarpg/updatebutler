@@ -295,6 +295,7 @@ public class CommandListener extends ListenerAdapter {
                     id = textChannel.get().getIdLong();
                     channel.sendMessage("Set time channel to **" + textChannel.get().getName() + "**.\n" +
                             "In which timezone do you live?").queue();
+                    return false;
                 }
 
                 Set<String> availableZoneIds = ZoneRulesProvider.getAvailableZoneIds();
@@ -308,7 +309,7 @@ public class CommandListener extends ListenerAdapter {
                 }
 
                 if (zone == null) {
-                    channel.sendMessage("Invalid time zone\n" + String.join(", ", availableZoneIds)).queue();
+                    channel.sendMessage("Invalid time zone\nhttp://tutorials.jenkov.com/java-date-time/java-util-timezone.html#available-time-zones").queue();
                     return false;
                 }
 

@@ -44,7 +44,7 @@ public final class UpdateButler {
         updatesAPI = new UpdatesAPI(configuration);
         configuration.setReleaseListener(
                 new ReleaseCreateListener(configuration, shardManager, new ArgumentParser(shardManager)));
-        executorService.scheduleAtFixedRate(new TimeChannelScheduler(shardManager, configuration), 10, 1, TimeUnit.MINUTES);
+        executorService.scheduleAtFixedRate(new TimeChannelScheduler(shardManager, configuration), 10, 15, TimeUnit.SECONDS);
     }
 
     public static void main(String[] args) throws LoginException, IOException {

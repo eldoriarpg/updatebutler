@@ -2,6 +2,7 @@ package de.eldoria.updatebutler.scheduler;
 
 import de.eldoria.updatebutler.config.Configuration;
 import de.eldoria.updatebutler.config.GuildSettings;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.GuildChannel;
 import net.dv8tion.jda.api.sharding.ShardManager;
 
@@ -10,6 +11,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
+@Slf4j
 public class TimeChannelScheduler implements Runnable {
     private final ShardManager manager;
     private final Configuration configuration;
@@ -22,12 +24,14 @@ public class TimeChannelScheduler implements Runnable {
 
     @Override
     public void run() {
+        log.debug("Refreshing time channel.");
         for (Map.Entry<String, GuildSettings> entry : configuration.getGuildSettings().entrySet()) {
             long timeChannel = entry.getValue().getTimeChannel();
             if (timeChannel == 0) continue;
             GuildChannel channel = manager.getGuildChannelById(timeChannel);
             if (channel == null) continue;
-            channel.getManager().setName("Developer Time: " + formatter.format(LocalDateTime.now().atZone(ZoneId.of("GMT")))).submit();
+            log.debug("Refreshing time channel for guild " + entry.getKey());
+            channel.getManager().setName("Developer Time: " + formatter.format(LocalDateTime.now().atZone(ZoneId.of(entry.getValue().getTimeZone())))).submit();
         }
     }
 }

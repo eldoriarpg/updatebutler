@@ -30,8 +30,9 @@ public class TimeChannelScheduler implements Runnable {
             if (timeChannel == 0) continue;
             GuildChannel channel = manager.getGuildChannelById(timeChannel);
             if (channel == null) continue;
-            log.debug("Refreshing time channel for guild " + entry.getKey());
-            channel.getManager().setName("Developer Time: " + formatter.format(LocalDateTime.now().atZone(ZoneId.of(entry.getValue().getTimeZone())))).submit();
+            String s = "Developer Time: " + formatter.format(LocalDateTime.now().atZone(ZoneId.of(entry.getValue().getTimeZone())));
+            log.debug("Refreshing time channel for guild {}. Setting to {}", entry.getKey(), s);
+            channel.getManager().setName(s).submit();
         }
     }
 }

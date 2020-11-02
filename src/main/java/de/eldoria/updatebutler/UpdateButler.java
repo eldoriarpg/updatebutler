@@ -14,6 +14,10 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag;
 
 import javax.security.auth.login.LoginException;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalField;
+import java.time.temporal.TemporalUnit;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -44,7 +48,10 @@ public final class UpdateButler {
         updatesAPI = new UpdatesAPI(configuration);
         configuration.setReleaseListener(
                 new ReleaseCreateListener(configuration, shardManager, new ArgumentParser(shardManager)));
-        executorService.scheduleAtFixedRate(new TimeChannelScheduler(shardManager, configuration), 10, 60*5, TimeUnit.SECONDS);
+        int min = 15 - (Instant.now().get(ChronoField.MINUTE_OF_HOUR) % 15);
+        int sec = 60 - (Instant.now().get(ChronoField.SECOND_OF_MINUTE));
+        log.info("Next time channel update in {} min {} sec", min, sec);
+        executorService.scheduleAtFixedRate(new TimeChannelScheduler(shardManager, configuration), min * 60 + sec, 60*15, TimeUnit.SECONDS);
     }
 
     public static void main(String[] args) throws LoginException, IOException {

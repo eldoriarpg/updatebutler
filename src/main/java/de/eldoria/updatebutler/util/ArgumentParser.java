@@ -1,6 +1,7 @@
 package de.eldoria.updatebutler.util;
 
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.GuildChannel;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -57,6 +58,7 @@ public class ArgumentParser {
      *
      * @param guild         guild for lookup
      * @param channelString id or name
+     *
      * @return text channel or null
      */
     public static Optional<TextChannel> getTextChannel(Guild guild, String channelString) {
@@ -76,6 +78,7 @@ public class ArgumentParser {
      * Get a boolean as a boolean state.
      *
      * @param bool boolean as string.
+     *
      * @return boolean state.
      */
     public static Optional<Boolean> parseBoolean(String bool) {
@@ -88,6 +91,7 @@ public class ArgumentParser {
      * @param bool    boolean as string
      * @param isTrue  string value for true. case is ignored
      * @param isFalse string value for false. case is ignored
+     *
      * @return boolean state.
      */
     public static Optional<Boolean> parseBoolean(String bool, String isTrue, String isFalse) {
@@ -106,6 +110,7 @@ public class ArgumentParser {
      * @param objects arguments
      * @param from    start index included
      * @param <T>     Type of objects
+     *
      * @return sublist
      */
     public static <T> List<T> getRangeAsList(T[] objects, int from) {
@@ -119,6 +124,7 @@ public class ArgumentParser {
      * @param from    start index (included). Use negative counts to count from the last index.
      * @param to      end index (excluded). Use negative counts to count from the last index.
      * @param <T>     Type of objects
+     *
      * @return sublist.
      */
     public static <T> List<T> getRangeAsList(T[] objects, int from, int to) {
@@ -131,6 +137,7 @@ public class ArgumentParser {
      * @param objects list of objects.
      * @param from    start index (included). Use negative counts to count from the last index.
      * @param <T>     Type of objects
+     *
      * @return sublist.
      */
     public static <T> List<T> getRangeAsList(List<T> objects, int from) {
@@ -144,6 +151,7 @@ public class ArgumentParser {
      * @param from    start index (included). Use negative counts to count from the last index.
      * @param to      end index (excluded). Use negative counts to count from the last index.
      * @param <T>     Type of objects
+     *
      * @return sublist.
      */
     public static <T> List<T> getRangeAsList(List<T> objects, int from, int to) {
@@ -168,6 +176,7 @@ public class ArgumentParser {
      *
      * @param strings array of strings.
      * @param from    start index (included). Use negative counts to count from the last index.
+     *
      * @return array sequence as string
      */
     public static String getMessage(String[] strings, int from) {
@@ -180,6 +189,7 @@ public class ArgumentParser {
      * @param strings array of strings.
      * @param from    start index (included). Use negative counts to count from the last index.
      * @param to      end index (excluded). Use negative counts to count from the last index.
+     *
      * @return array sequence as string
      */
     public static String getMessage(String[] strings, int from, int to) {
@@ -190,6 +200,7 @@ public class ArgumentParser {
      * Parse a string to integer.
      *
      * @param number number as string
+     *
      * @return number or null if parse failed
      */
     public static OptionalInt parseInt(String number) {
@@ -204,6 +215,7 @@ public class ArgumentParser {
      * Parse a string to double.
      *
      * @param number number as string
+     *
      * @return number or null if parse failed
      */
     public static OptionalDouble parseDouble(String number) {
@@ -218,6 +230,7 @@ public class ArgumentParser {
      * Parse a string to long.
      *
      * @param number number as string
+     *
      * @return number or null if parse failed
      */
     public static OptionalLong parseLong(String number) {
@@ -232,6 +245,7 @@ public class ArgumentParser {
      * Parse a string to long.
      *
      * @param number number as string
+     *
      * @return number or null if parse failed
      */
     public static OptionalLong hexToLong(String number) {
@@ -261,10 +275,23 @@ public class ArgumentParser {
      * Check if a string contains a interval.
      *
      * @param timeStampString interval as string
+     *
      * @return true if the String is a Intervall
      */
     public static boolean getInterval(String timeStampString) {
         return INTERVAL.matcher(timeStampString).matches();
+    }
+
+    public Optional<GuildChannel> getGuildChannel(Guild guild, String content) {
+        GuildChannel channel = byId(content, s -> shardManager.getTextChannelById(s));
+        if (channel != null) {
+            return Optional.of(channel);
+        }
+        channel = byId(content, s -> shardManager.getVoiceChannelById(s));
+        if (channel != null) {
+            return Optional.of(channel);
+        }
+        return Optional.empty();
     }
 
     /**
@@ -272,6 +299,7 @@ public class ArgumentParser {
      *
      * @param guild      guild for lookup
      * @param userString string for lookup
+     *
      * @return user object if user is present or null
      */
     public User getGuildUser(Guild guild, String userString) {
@@ -287,6 +315,7 @@ public class ArgumentParser {
      *
      * @param guild        guild for lookup
      * @param memberString string for lookup
+     *
      * @return member object of member is present or null
      */
     public Member getGuildMember(Guild guild, String memberString) {
@@ -324,11 +353,12 @@ public class ArgumentParser {
     }
 
     /**
-     * Searches for a user. First on a guild and after this on all users the bot currently know.
-     * Equal to calling {@link #getGuildUser(Guild, String)} and {@link #getUser(String)}.
+     * Searches for a user. First on a guild and after this on all users the bot currently know. Equal to calling {@link
+     * #getGuildUser(Guild, String)} and {@link #getUser(String)}.
      *
      * @param userString string for lookup
      * @param guild      guild for lookup
+     *
      * @return user object or null if no user is found
      */
     public User getUserDeepSearch(String userString, Guild guild) {
@@ -343,6 +373,7 @@ public class ArgumentParser {
      * Get a user object by id, name or tag.
      *
      * @param userString string for lookup
+     *
      * @return user object or null if no user is found
      */
     public User getUser(String userString) {
@@ -375,6 +406,7 @@ public class ArgumentParser {
      *
      * @param guild          guild for lookup
      * @param channelStrings list of ids and/or names
+     *
      * @return list of text channels without null objects
      */
     public List<TextChannel> getTextChannels(Guild guild, Collection<String> channelStrings) {
@@ -387,6 +419,7 @@ public class ArgumentParser {
      *
      * @param guild       guild for lookup
      * @param roleStrings list of ids and/or names
+     *
      * @return list of roles. without null objects
      */
     public List<Role> getRoles(Guild guild, Collection<String> roleStrings) {
@@ -399,6 +432,7 @@ public class ArgumentParser {
      *
      * @param guild      guild for lookup
      * @param roleString id or name of role
+     *
      * @return role object or null
      */
     public Optional<Role> getRole(Guild guild, String roleString) {
@@ -421,6 +455,7 @@ public class ArgumentParser {
      * Get user objects from a list of ids, names and/or tags.
      *
      * @param userStrings list of ids, names and/or tags
+     *
      * @return a list of user objects. without null
      */
     public List<User> getUsers(Collection<String> userStrings) {
@@ -432,6 +467,7 @@ public class ArgumentParser {
      *
      * @param guild         guild for lookup
      * @param memberStrings list of member ids, tags, nicknames or effective names
+     *
      * @return list of member object without nulls
      */
     public List<Member> getGuildMembers(Guild guild, Collection<String> memberStrings) {
@@ -444,6 +480,7 @@ public class ArgumentParser {
      *
      * @param guild       guild for lookup
      * @param userStrings list of user ids, names and/or tags
+     *
      * @return list of users without null
      */
     public List<User> getGuildUsers(Guild guild, Collection<String> userStrings) {
@@ -455,6 +492,7 @@ public class ArgumentParser {
      * Get guilds by ids or names.
      *
      * @param guildStrings list of ids and/or names.
+     *
      * @return list of guilds. without null
      */
     public List<Guild> getGuilds(List<String> guildStrings) {
@@ -467,6 +505,7 @@ public class ArgumentParser {
      * Get guilds by id or name.
      *
      * @param guildString guild id or name
+     *
      * @return guild object or null
      */
     public Optional<Guild> getGuild(String guildString) {
@@ -490,6 +529,7 @@ public class ArgumentParser {
      * Search a user by fuzzy search.
      *
      * @param userString user string to search
+     *
      * @return a list of users. if a direct match was found only
      */
     public List<User> fuzzyGlobalUserSearch(String userString) {
@@ -527,8 +567,9 @@ public class ArgumentParser {
      *
      * @param userString user string to search
      * @param guildId    guild if to search
-     * @return a list of users. if a direct match was found only 1 user.
-     * if guild id is invalid a empty list is returned.
+     *
+     * @return a list of users. if a direct match was found only 1 user. if guild id is invalid a empty list is
+     * returned.
      */
 
     public List<User> fuzzyGuildUserSearch(long guildId, String userString) {

@@ -19,6 +19,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 
 import static de.eldoria.updatebutler.util.FileUtil.home;
@@ -57,6 +58,7 @@ public class Configuration {
 
     @SerializedName("guildSettings")
     @Expose
+    @Getter
     private HashMap<String, GuildSettings> guildSettings = new HashMap<>();
 
     public static Configuration load() throws IOException {

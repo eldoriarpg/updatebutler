@@ -25,6 +25,12 @@ public class GuildSettings {
     @Setter
     @Expose
     private String prefix = "+";
+    @Setter
+    @Expose
+    private long timeChannel = 0L;
+    @Setter
+    @Expose
+    private String timeZone = "";
     @SerializedName("allowed_users")
     @Expose
     private Set<Long> allowedUsers = new HashSet<>();
@@ -133,7 +139,7 @@ public class GuildSettings {
     public String getPhrases() {
         AtomicInteger integer = new AtomicInteger(0);
         return phrases.stream()
-                .map(a -> integer.incrementAndGet() + " (" +  a.getCommand() + ")```" + a.getPhrase() + "```")
+                .map(a -> integer.incrementAndGet() + " (" + a.getCommand() + ")```" + a.getPhrase() + "```")
                 .collect(Collectors.joining("\n"));
     }
 

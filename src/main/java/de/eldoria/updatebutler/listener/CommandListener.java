@@ -22,6 +22,7 @@ import de.eldoria.updatebutler.util.Verifier;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.GuildChannel;
 import net.dv8tion.jda.api.entities.ISnowflake;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
@@ -38,6 +39,7 @@ import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nonnull;
+import java.time.zone.ZoneRulesProvider;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -55,7 +57,7 @@ public class CommandListener extends ListenerAdapter {
     private final Configuration configuration;
     private final ArgumentParser parser;
     private final String[] userCommands = {"latestVersion", "versions", "versionInfo", "info", "applist"};
-    private final String[] ownerCommands = {"setPrefix", "grant", "revoke", "createApp", "createCommand", "removeCommand", "createPhrase", "removePhrase", "listPhrase"};
+    private final String[] ownerCommands = {"setPrefix", "grant", "revoke", "createApp", "createCommand", "removeCommand", "createPhrase", "removePhrase", "listPhrase", "setTimeChannel"};
     private final String[] appCommands = {"deleteApp", "grantAccess", "revokeAccess", "deployUpdate", "deleteUpdate", "setName", "setDescr", "setAlias", "setChannel"};
     private final DialogHandler dialogHandler;
 
@@ -184,6 +186,9 @@ public class CommandListener extends ListenerAdapter {
             if ("listPhrase".equalsIgnoreCase(label)) {
                 listPhrase(member, channel, guild, guildSettings);
             }
+            if ("setTimeChannel".equalsIgnoreCase(label)) {
+                setTimeChannel(member, channel, guild, guildSettings);
+            }
             return;
         }
 
@@ -264,6 +269,55 @@ public class CommandListener extends ListenerAdapter {
             userCommand.get().sendCommandOutput(channel);
         }
         //channel.sendMessage("Invalid command.").queue();
+    }
+
+    private void setTimeChannel(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
+        dialogHandler.startDialog(guild, channel, member, "Please mention a channel to set the time channel or \"none\" to remove the current channel.", new Dialog() {
+            private Long id = null;
+
+            @Override
+            public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
+                String content = message.getContentRaw();
+                if (id == null) {
+                    if ("none".equalsIgnoreCase(content)) {
+                        guildSettings.setTimeChannel(0);
+                        channel.sendMessage("Time channel removed.").queue();
+                        return true;
+                    }
+
+                    Optional<GuildChannel> textChannel = parser.getGuildChannel(guild, content);
+
+                    if (textChannel.isEmpty()) {
+                        channel.sendMessage("Invalid channel." +
+                                "\nPlease mention a channel to set the time channel or \"none\" to remove the current channel.").queue();
+                        return false;
+                    }
+                    id = textChannel.get().getIdLong();
+                    channel.sendMessage("Set time channel to **" + textChannel.get().getName() + "**.\n" +
+                            "In which timezone do you live?").queue();
+                }
+
+                Set<String> availableZoneIds = ZoneRulesProvider.getAvailableZoneIds();
+
+                String zone = null;
+
+                for (String availableZoneId : availableZoneIds) {
+                    if (availableZoneId.equalsIgnoreCase(content)) {
+                        zone = availableZoneId;
+                    }
+                }
+
+                if (zone == null) {
+                    channel.sendMessage("Invalid time zone\n" + String.join(", ", availableZoneIds)).queue();
+                    return false;
+                }
+
+                guildSettings.setTimeZone(zone);
+                guildSettings.setTimeChannel(id);
+                channel.sendMessage("Timezone set. Channel will be updated automatically. In the next minute").queue();
+                return true;
+            }
+        });
     }
 
 
@@ -775,6 +829,7 @@ public class CommandListener extends ListenerAdapter {
     /*
     OWNER COMMANDS END
      */
+
     /*
     APPLICATION COMMANDS START
      */
@@ -833,6 +888,10 @@ public class CommandListener extends ListenerAdapter {
                         }
 
                         if (description == null) {
+                            if (content.length() > 1024) {
+                                channel.sendMessage("Patchnotes are too long. " + content.length() + "/1024").queue();
+                                return false;
+                            }
                             description = content;
                             channel.sendMessage("Patchnotes set to:\n" + description).queue();
                             channel.sendMessage("Is this update a dev build? [yes|no]").queue();
@@ -1101,7 +1160,7 @@ public class CommandListener extends ListenerAdapter {
             return;
         }
 
-        if("none".equalsIgnoreCase(args[1])){
+        if ("none".equalsIgnoreCase(args[1])) {
             application.setChannel(null);
             channel.sendMessage("Removed update channel.").queue();
             return;

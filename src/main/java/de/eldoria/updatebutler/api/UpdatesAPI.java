@@ -48,15 +48,16 @@ public class UpdatesAPI {
                     .headers("Access-Control-Request-Method");
             if (accessControlRequestMethod != null) {
                 response.header("Access-Control-Allow-Methods",
-                        "HEAD, GET, OPTIONS");
+                        "HEAD, GET, POST, OPTIONS");
             }
 
             return "OK";
         });
 
         before((request, response) -> {
-            log.debug("Received request on route: {}\nHeaders:\n{}\nBody:\n{}",
+            log.debug("Received request on route: {} {}\nHeaders:\n{}\nBody:\n{}",
                     request.requestMethod() + " " + request.uri(),
+                    request.queryString(),
                     request.headers().stream().map(h -> "   " + h + ": " + request.headers(h))
                             .collect(Collectors.joining("\n")),
                     request.body());
@@ -112,6 +113,11 @@ public class UpdatesAPI {
 
             return GSON.toJson(new UpdateCheckResponse(false, release.getVersion(), release.getChecksum()));
         })));
+
+        post("/download", ((request, response) -> {
+            response.status(HttpStatusCodes.STATUS_CODE_OK);
+            return "Please reload to download";
+        }));
 
         get("/download", ((request, response) -> {
             try {
@@ -204,6 +210,7 @@ public class UpdatesAPI {
         }
 
         optionalRelease.get().downloaded();
+        log.debug("Delivered release {}", optionalRelease.get().getVersion());
         response.status(HttpStatusCodes.STATUS_CODE_OK);
 
         return response.raw();

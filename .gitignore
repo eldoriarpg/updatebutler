@@ -119,4 +119,4 @@ target/
 /logs/
 /resources
 
-.idea/$CACHE_FILE$
+.idea/

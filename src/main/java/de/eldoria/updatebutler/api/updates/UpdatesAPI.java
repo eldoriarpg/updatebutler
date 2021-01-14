@@ -1,8 +1,9 @@
-package de.eldoria.updatebutler.api;
+package de.eldoria.updatebutler.api.updates;
 
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import de.eldoria.updatebutler.api.RateLimiter;
 import de.eldoria.updatebutler.config.Application;
 import de.eldoria.updatebutler.config.Configuration;
 import de.eldoria.updatebutler.config.Release;
@@ -16,55 +17,21 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
-import static spark.Spark.before;
 import static spark.Spark.get;
-import static spark.Spark.ipAddress;
-import static spark.Spark.options;
-import static spark.Spark.port;
 import static spark.Spark.post;
 
 @Slf4j
 public class UpdatesAPI {
     private static final Gson GSON = new GsonBuilder().serializeNulls().create();
     private final Configuration configuration;
+    private final RateLimiter downloadLimiter = new RateLimiter(5, ChronoUnit.SECONDS);
 
     public UpdatesAPI(Configuration configuration) {
         this.configuration = configuration;
-        port(configuration.getPort());
-        ipAddress(configuration.getHost());
 
-        options("/*", (request, response) -> {
-            String accessControlRequestHeaders = request
-                    .headers("Access-Control-Request-Headers");
-            if (accessControlRequestHeaders != null) {
-                response.header("Access-Control-Allow-Headers",
-                        "Authorization");
-            }
-
-            String accessControlRequestMethod = request
-                    .headers("Access-Control-Request-Method");
-            if (accessControlRequestMethod != null) {
-                response.header("Access-Control-Allow-Methods",
-                        "HEAD, GET, POST, OPTIONS");
-            }
-
-            return "OK";
-        });
-
-        before((request, response) -> {
-            log.debug("Received request on route: {} {}\nHeaders:\n{}\nBody:\n{}",
-                    request.requestMethod() + " " + request.uri(),
-                    request.queryString(),
-                    request.headers().stream().map(h -> "   " + h + ": " + request.headers(h))
-                            .collect(Collectors.joining("\n")),
-                    request.body());
-            response.header("Access-Control-Allow-Origin", "*");
-            response.header("Access-Control-Allow-Headers", "*");
-            //response.type("application/json");
-        });
 
         get("/check", (((request, response) -> {
             int id;
@@ -120,6 +87,7 @@ public class UpdatesAPI {
         }));
 
         get("/download", ((request, response) -> {
+            downloadLimiter.assertRateLimit(request);
             try {
                 return getOutputFileStream(request, response, Integer.parseInt(request.queryParams("id")),
                         request.queryParams("version"));

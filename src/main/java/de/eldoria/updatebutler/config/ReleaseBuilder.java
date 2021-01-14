@@ -70,7 +70,7 @@ public final class ReleaseBuilder {
         String publishedDate = C.DATE_FORMAT.format(LocalDateTime.now().atZone(ZoneId.of("UCT")));
 
         Release release = new Release(version, name, descr, dev,
-                C.DATE_FORMAT.format(LocalDateTime.now().atZone(ZoneId.of("UCT"))), targetPath.toString(), hash);
+                C.DATE_FORMAT.format(LocalDateTime.now()), targetPath.toString(), hash);
         return Optional.of(release);
     }
 }

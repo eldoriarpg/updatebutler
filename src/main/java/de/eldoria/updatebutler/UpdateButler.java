@@ -1,7 +1,10 @@
 package de.eldoria.updatebutler;
 
-import de.eldoria.updatebutler.api.UpdatesAPI;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import de.eldoria.updatebutler.api.WebAPI;
 import de.eldoria.updatebutler.config.Configuration;
+import de.eldoria.updatebutler.config.DBSettings;
 import de.eldoria.updatebutler.listener.CommandListener;
 import de.eldoria.updatebutler.listener.ReleaseCreateListener;
 import de.eldoria.updatebutler.scheduler.TimeChannelScheduler;
@@ -13,12 +16,20 @@ import net.dv8tion.jda.api.sharding.ShardManager;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 
 import javax.security.auth.login.LoginException;
+import javax.sql.DataSource;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoField;
+import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 public final class UpdateButler {
@@ -26,8 +37,9 @@ public final class UpdateButler {
     private static ReleaseCreateListener releaseCreateListener;
     private final Configuration configuration;
     private ShardManager shardManager = null;
-    private UpdatesAPI updatesAPI;
+    private WebAPI webAPI;
     private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+    private DataSource source;
 
     private UpdateButler() throws IOException {
         configuration = Configuration.load();
@@ -42,11 +54,11 @@ public final class UpdateButler {
         CommandListener commandListener = new CommandListener(configuration, shardManager);
         shardManager.addEventListener(commandListener);
 
-
-        updatesAPI = new UpdatesAPI(configuration);
+        initializeDatabase();
+        webAPI = new WebAPI(configuration, source);
         configuration.setReleaseListener(
                 new ReleaseCreateListener(configuration, shardManager, new ArgumentParser(shardManager)));
-        int min = 15 - (LocalDateTime.now().get(ChronoField.MINUTE_OF_HOUR) % 15) -1 ;
+        int min = 15 - (LocalDateTime.now().get(ChronoField.MINUTE_OF_HOUR) % 15) - 1;
         if (min < 1) {
             min = 14;
         }

@@ -1,4 +1,4 @@
-package de.eldoria.updatebutler.api;
+package de.eldoria.updatebutler.api.updates;
 
 import com.google.gson.annotations.SerializedName;
 import lombok.Getter;

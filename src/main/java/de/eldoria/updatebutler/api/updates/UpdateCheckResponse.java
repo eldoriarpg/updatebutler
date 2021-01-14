@@ -1,4 +1,4 @@
-package de.eldoria.updatebutler.api;
+package de.eldoria.updatebutler.api.updates;
 
 public class UpdateCheckResponse {
     private final boolean newVersionAvailable;

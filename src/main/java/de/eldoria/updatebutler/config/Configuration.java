@@ -19,7 +19,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Optional;
 
 import static de.eldoria.updatebutler.util.FileUtil.home;
@@ -61,6 +60,10 @@ public class Configuration {
     @Getter
     private HashMap<String, GuildSettings> guildSettings = new HashMap<>();
 
+    @Expose
+    @Getter
+    private DBSettings dbSettings;
+
     public static Configuration load() throws IOException {
         File config = FileUtil.createDirectory("config");
         try (var in = ClassLoader.getSystemClassLoader().getResourceAsStream("config.json")) {
@@ -89,6 +92,7 @@ public class Configuration {
 
     public int getNextAppId() {
         currentId++;
+        save();
         return currentId;
     }
 

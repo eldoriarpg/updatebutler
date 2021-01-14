@@ -75,4 +75,53 @@ public final class UpdateButler {
 
         log.info("{} shards initialized", shardManager.getShardsTotal());
     }
+
+    private void initializeDatabase() throws IllegalStateException {
+        DBSettings settings = configuration.getDbSettings();
+        Properties props = new Properties();
+        props.setProperty("dataSourceClassName", "org.mariadb.jdbc.MariaDbDataSource");
+        props.setProperty("dataSource.serverName", settings.getAddress());
+        props.setProperty("dataSource.portNumber", settings.getPort());
+        props.setProperty("dataSource.user", settings.getUser());
+        props.setProperty("dataSource.password", settings.getPassword());
+        props.setProperty("dataSource.databaseName", settings.getDatabase());
+
+        HikariConfig config = new HikariConfig(props);
+
+        config.setMaximumPoolSize(settings.getMaxConnections());
+
+        source = new HikariDataSource(config);
+
+        try (Connection conn = source.getConnection()) {
+            boolean valid = conn.isValid(10000);
+            if (!valid) {
+                throw new IllegalStateException("Could not establish a valid database connection.");
+            }
+            log.info("Database connected.");
+        } catch (SQLException e) {
+            log.error("Connection is not valid.", e);
+            throw new IllegalStateException("Could not establish a valid database connection.", e);
+        }
+
+        log.info("Ensuring database consistency.");
+
+        String query;
+        try (BufferedReader inputStream = new BufferedReader(
+                new InputStreamReader(this.getClass().getClassLoader().getResourceAsStream("setup.sql")))) {
+            query = inputStream.lines().collect(Collectors.joining(System.lineSeparator()));
+        } catch (IOException e) {
+            log.error("Could not load sql setup script", e);
+            throw new IllegalStateException("Failed to ensure database consistency.", e);
+        }
+        for (String q : query.split(";")) {
+            if (q.isBlank()) continue;
+            try (Connection conn = source.getConnection(); PreparedStatement stmt = conn.prepareStatement(q)) {
+                stmt.execute();
+            } catch (SQLException e) {
+                log.error("Could not update database", e);
+                throw new IllegalStateException("Failed to ensure database consistency.", e);
+            }
+        }
+        log.info("Database updated.");
+    }
 }

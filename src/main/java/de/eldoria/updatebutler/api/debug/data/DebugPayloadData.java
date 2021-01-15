@@ -10,11 +10,11 @@ public class DebugPayloadData {
     private final int v = 1;
     protected PluginMetaData pluginMeta;
     protected ServerMetaData serverMeta;
-    protected String additionalPluginMeta;
+    protected EntryData[] additionalPluginMeta;
     protected String latestLog;
-    protected ConfigDumpData[] configDumps;
+    protected EntryData[] configDumps;
 
-    public DebugPayloadData(PluginMetaData pluginMeta, ServerMetaData serverMeta, String additionalPluginMeta, String latestLog, ConfigDumpData[] configDumps) {
+    public DebugPayloadData(PluginMetaData pluginMeta, ServerMetaData serverMeta, EntryData[] additionalPluginMeta, String latestLog, EntryData[] configDumps) {
         this.pluginMeta = pluginMeta;
         this.serverMeta = serverMeta;
         this.additionalPluginMeta = additionalPluginMeta;
@@ -29,13 +29,12 @@ public class DebugPayloadData {
                 + pluginMeta.toString()
                 + "\n\nServer Meta:\n"
                 + serverMeta.toString()
-                + "\n\nAdditional Plugin Meta:\n"
-                + (additionalPluginMeta == null ? "none" : additionalPluginMeta)
+                + Arrays.stream(additionalPluginMeta).map(c -> "\n\n" + c.getName() + "\n" + c.getContent()).collect(Collectors.joining())
                 + "\n\nLatest Log:\n"
                 + latestLog
                 + "\n\n"
                 + Arrays.stream(configDumps)
-                .map(c -> "Path: " + c.getPath() + "\n" + c.getContent())
+                .map(c -> "Path: " + c.getName() + "\n" + c.getContent())
                 .collect(Collectors.joining("\n\n"));
     }
 }

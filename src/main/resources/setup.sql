@@ -17,12 +17,15 @@ create table if not exists debug_data
     log             longtext                     not null,
     plugin_meta     longtext collate utf8mb4_bin not null,
     server_meta     longtext collate utf8mb4_bin not null,
-    additional_meta longtext                     not null,
+    additional_data longtext collate utf8mb4_bin null,
+    constraint additional_data
+        check (json_valid(`additional_data`)),
     constraint plugin_meta
-        check (json_valid(plugin_meta)),
+        check (json_valid(`plugin_meta`)),
     constraint server_meta
-        check (json_valid(server_meta))
+        check (json_valid(`server_meta`))
 );
+
 
 create table if not exists debug_configs
 (

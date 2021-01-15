@@ -24,6 +24,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Application {
+    @Expose
+    private final Set<Long> owner;
+    @Getter
+    @Expose
+    private final String webhook;
+    @Expose
+    private final HashMap<String, Release> releases = new HashMap<>();
     /**
      * The id of the application. immutable
      */
@@ -46,7 +53,6 @@ public class Application {
     @SerializedName("display_name")
     @Expose
     private String displayName;
-
     /**
      * Short description of the application
      */
@@ -54,26 +60,14 @@ public class Application {
     @Setter
     @Expose
     private String description;
-
     @Getter
     @Setter
     @Expose
     private String[] alias;
-
-    @Expose
-    private Set<Long> owner;
-
-    @Getter
-    @Expose
-    private String webhook;
-
     @Getter
     @Setter
     @Expose
     private Long channel;
-
-    @Expose
-    private HashMap<String, Release> releases = new HashMap<>();
 
     public Application(int id, String identifier, String displayName, String description, String[] alias, Long owner, Long channel) {
         this.id = id;
@@ -134,7 +128,7 @@ public class Application {
                 .setTitle("#" + id + " " + getDisplayName() + " " + release.getVersion())
                 .setDescription(release.getTitle())
                 .addField("Patchnotes", release.getPatchnotes(), false)
-                .addField("Stable", release.isDevBuild() ? "dev":"stable", true)
+                .addField("Stable", release.isDevBuild() ? "dev" : "stable", true)
                 .addField("Download", configuration.getHostName() + "/download?id=" + id + "&version=" + release.getVersion().replace(" ", "_"), true)
                 .addField("Checksum Sha256", release.getChecksum(), true)
                 .setTimestamp(release.getPublished());
@@ -196,6 +190,7 @@ public class Application {
      * Get all releases of a application
      *
      * @param dev true when dev builds should be included
+     *
      * @return list of dev builds.
      */
     public List<Release> getReleases(boolean dev) {

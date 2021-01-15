@@ -35,31 +35,25 @@ public class Configuration {
             .registerTypeAdapter(Phrase.class,
                     new GsonAdapter<Phrase>("de.eldoria.updatebutler.config.phrase"))
             .create();
-    private ReleaseCreateListener listener;
     @Getter
     @Expose
-    private String token = "";
-
-    @Expose
-    private int currentId = 0;
-
+    private final String token = "";
     @Getter
     @Expose
-    private String hostName = "";
-
+    private final String hostName = "";
     @Getter
     @Expose
-    private String host = "";
-
+    private final String host = "";
     @Getter
     @Expose
-    private int port = 19050;
-
+    private final int port = 19050;
     @SerializedName("guildSettings")
     @Expose
     @Getter
-    private HashMap<String, GuildSettings> guildSettings = new HashMap<>();
-
+    private final HashMap<String, GuildSettings> guildSettings = new HashMap<>();
+    private ReleaseCreateListener listener;
+    @Expose
+    private int currentId = 0;
     @Expose
     @Getter
     private DBSettings dbSettings;

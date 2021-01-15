@@ -31,6 +31,7 @@ public class Verifier {
      * Returns true if the id is a valid id.
      *
      * @param id id to test.
+     *
      * @return true if id is valid
      */
     public static boolean isValidId(String id) {
@@ -38,10 +39,10 @@ public class Verifier {
     }
 
     /**
-     * Tries to cast a String to a boolean.
-     * Returns null if not possible
+     * Tries to cast a String to a boolean. Returns null if not possible
      *
      * @param string String to parse
+     *
      * @return boolean or null if string can't be parsed
      */
     public static Optional<Boolean> checkAndGetBoolean(String string) {
@@ -57,6 +58,7 @@ public class Verifier {
      *
      * @param a first object
      * @param b second object
+     *
      * @return true if the snowflakes are equal.
      */
     public static boolean equalSnowflake(ISnowflake a, ISnowflake b) {
@@ -69,6 +71,7 @@ public class Verifier {
      *
      * @param guild guild for role lookup
      * @param args  array of role id
+     *
      * @return list of valid roles
      */
     public static List<Role> getValidRoles(Guild guild, List<String> args) {
@@ -80,6 +83,7 @@ public class Verifier {
      *
      * @param guild guild for role lookup
      * @param args  array of role ids
+     *
      * @return list of valid roles
      */
     public static List<Role> getValidRoles(Guild guild, String[] args) {
@@ -93,6 +97,7 @@ public class Verifier {
      *
      * @param guild guild for role lookup
      * @param args  array of role id
+     *
      * @return list of valid roles
      */
     public static List<TextChannel> getValidTextChannels(Guild guild, List<String> args) {
@@ -104,6 +109,7 @@ public class Verifier {
      *
      * @param guild guild for channel lookup
      * @param args  array of channel ids
+     *
      * @return list of valid channels
      */
     private static List<TextChannel> getValidTextChannels(Guild guild, String[] args) {
@@ -117,6 +123,7 @@ public class Verifier {
      *
      * @param shardManager jda for user lookup
      * @param collect      list of long ids
+     *
      * @return list of valid users.
      */
     public static List<User> getValidUserByLong(ShardManager shardManager, List<Long> collect) {
@@ -132,6 +139,7 @@ public class Verifier {
      *
      * @param argument argument to match against.
      * @param args     one or more arguments to check.
+     *
      * @return true if one argument matches.
      */
     public static boolean isArgument(String argument, String... args) {
@@ -147,6 +155,7 @@ public class Verifier {
      * Extracts an id from discord's formatting.
      *
      * @param id the formatted id.
+     *
      * @return the extracted id.
      */
     public static String getIdRaw(String id) {

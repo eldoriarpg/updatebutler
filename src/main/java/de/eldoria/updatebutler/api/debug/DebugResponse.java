@@ -1,8 +1,8 @@
 package de.eldoria.updatebutler.api.debug;
 
 public class DebugResponse {
-    private String hash;
-    private String deletionHash;
+    private final String hash;
+    private final String deletionHash;
 
     public DebugResponse(String hash, String deletionHash) {
         this.hash = hash;

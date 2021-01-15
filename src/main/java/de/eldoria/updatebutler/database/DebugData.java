@@ -85,7 +85,7 @@ public class DebugData {
         return Optional.of(new DebugResponse(hash, deletionHash));
     }
 
-    public OptionalInt getIdFromDeletionHash(String hash){
+    public OptionalInt getIdFromDeletionHash(String hash) {
         try (Connection conn = source.getConnection();
              PreparedStatement stmt = conn.prepareStatement(
                      "Select id from debugs where deletion_hash = ?")) {
@@ -102,7 +102,7 @@ public class DebugData {
         }
     }
 
-    public OptionalInt getIdFromHash(String hash){
+    public OptionalInt getIdFromHash(String hash) {
         try (Connection conn = source.getConnection();
              PreparedStatement stmt = conn.prepareStatement(
                      "Select id from debugs where hash = ?")) {

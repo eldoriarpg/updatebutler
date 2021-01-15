@@ -19,7 +19,6 @@ import javax.security.auth.login.LoginException;
 import javax.sql.DataSource;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -37,9 +36,9 @@ public final class UpdateButler {
     private static UpdateButler instance;
     private static ReleaseCreateListener releaseCreateListener;
     private final Configuration configuration;
+    private final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     private ShardManager shardManager = null;
     private WebAPI webAPI;
-    private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     private DataSource source;
 
     private UpdateButler() throws IOException {

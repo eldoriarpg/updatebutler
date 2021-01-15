@@ -1,11 +1,11 @@
 package de.eldoria.updatebutler.api.debug.data;
 
-import lombok.Getter;
+import lombok.Data;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-@Getter
+@Data
 public class ServerMetaData {
     protected String version;
     protected int currentPlayers;

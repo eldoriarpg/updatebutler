@@ -13,8 +13,8 @@ public class PlainPhrase extends Phrase {
 
     @Override
     public boolean matches(String string) {
-        if(caseSensitive){
-        return string.contains(getPhrase());
+        if (caseSensitive) {
+            return string.contains(getPhrase());
         }
         return string.toLowerCase().contains(getPhrase().toLowerCase());
     }

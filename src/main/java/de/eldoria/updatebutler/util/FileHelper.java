@@ -23,6 +23,7 @@ public final class FileHelper {
      * Get every file from a url.
      *
      * @param url url for download
+     *
      * @return file object or null if the url could not be found.
      */
     public static Optional<File> getFileFromURL(String url) {

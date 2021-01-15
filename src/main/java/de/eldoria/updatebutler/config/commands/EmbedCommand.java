@@ -3,7 +3,6 @@ package de.eldoria.updatebutler.config.commands;
 import com.google.gson.annotations.Expose;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -30,13 +29,13 @@ public class EmbedCommand extends UserCommand {
 
     @Override
     public void sendCommandOutput(TextChannel channel) {
-        if(embed == null){
+        if (embed == null) {
             buildEmbed();
         }
         channel.sendMessage(embed).queue();
     }
 
-    private void buildEmbed(){
+    private void buildEmbed() {
         EmbedBuilder builder = new EmbedBuilder().setTitle(title).setDescription(descr.isBlank() ? null : descr);
         for (EmbedField field : fields) {
             builder.addField(field.toField());
@@ -48,11 +47,11 @@ public class EmbedCommand extends UserCommand {
     public static class Builder {
         private final String command;
         @Getter
+        private final List<EmbedField> fields = new ArrayList<>();
+        @Getter
         private String title = null;
         @Getter
         private String descr = null;
-        @Getter
-        private final List<EmbedField> fields = new ArrayList<>();
 
         public Builder(String command) {
             this.command = command;

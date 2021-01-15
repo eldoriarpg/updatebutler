@@ -11,22 +11,22 @@ import java.time.LocalDateTime;
 public class Release {
 
     @Expose
-    private String version;
+    private final String version;
     @Expose
-    private String title;
+    private final String title;
     @Expose
-    private int downloads;
-    @Expose
-    private String patchnotes;
+    private final String patchnotes;
     @SerializedName("dev_build")
     @Expose
-    private boolean devBuild;
+    private final boolean devBuild;
     @Expose
-    private String published;
+    private final String published;
     @Expose
-    private String file;
+    private final String file;
     @Expose
-    private String checksum;
+    private final String checksum;
+    @Expose
+    private int downloads;
 
     public Release(String version, String title, String patchnotes, boolean devBuild, String published, String file, String checksum) {
         this.version = version;

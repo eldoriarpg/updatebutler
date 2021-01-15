@@ -22,6 +22,15 @@ import java.util.stream.Collectors;
 
 @Getter
 public class GuildSettings {
+    @SerializedName("allowed_users")
+    @Expose
+    private final Set<Long> allowedUsers = new HashSet<>();
+    @Expose
+    private final Map<String, Application> applications = new HashMap<>();
+    @Expose
+    private final Set<UserCommand> userCommands = new HashSet<>();
+    @Expose
+    private final List<Phrase> phrases = new ArrayList<>();
     @Setter
     @Expose
     private String prefix = "+";
@@ -31,16 +40,6 @@ public class GuildSettings {
     @Setter
     @Expose
     private String timeZone = "";
-    @SerializedName("allowed_users")
-    @Expose
-    private Set<Long> allowedUsers = new HashSet<>();
-    @Expose
-    private Map<String, Application> applications = new HashMap<>();
-
-    @Expose
-    private Set<UserCommand> userCommands = new HashSet<>();
-    @Expose
-    private List<Phrase> phrases = new ArrayList<>();
 
     public boolean isAllowedUser(Member member) {
         return allowedUsers.contains(member.getIdLong()) || member.isOwner() || member.hasPermission(Permission.ADMINISTRATOR);

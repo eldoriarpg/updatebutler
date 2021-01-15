@@ -1,7 +1,7 @@
 package de.eldoria.updatebutler.api.debug;
 
-import de.eldoria.updatebutler.api.debug.data.EntryData;
 import de.eldoria.updatebutler.api.debug.data.DebugPayloadData;
+import de.eldoria.updatebutler.api.debug.data.EntryData;
 import de.eldoria.updatebutler.api.debug.data.PluginMetaData;
 import de.eldoria.updatebutler.api.debug.data.ServerMetaData;
 import lombok.extern.slf4j.Slf4j;

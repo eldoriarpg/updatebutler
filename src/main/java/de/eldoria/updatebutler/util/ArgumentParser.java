@@ -32,7 +32,7 @@ public class ArgumentParser {
     private static final Pattern DISCORD_TAG = Pattern.compile(".+?#[0-9]{4}");
     private static final Pattern INTERVAL = Pattern.compile("([0-9])+\\s(((min|hour|day|week)s?)|month)",
             Pattern.MULTILINE);
-    private ShardManager shardManager;
+    private final ShardManager shardManager;
 
     /**
      * Create a new argument parser.

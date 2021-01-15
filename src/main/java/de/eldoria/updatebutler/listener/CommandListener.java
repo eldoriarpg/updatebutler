@@ -569,8 +569,8 @@ public class CommandListener extends ListenerAdapter {
     private void removeCommand(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
         String userCommands = guildSettings.getUserCommands();
         dialogHandler.startDialog(guild, channel, member, "Which command do you want to remove?\n" + userCommands, new Dialog() {
-            private String command = null;
-            private UserCommand userCommand = null;
+            private final String command = null;
+            private final UserCommand userCommand = null;
 
             @Override
             public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
@@ -591,10 +591,10 @@ public class CommandListener extends ListenerAdapter {
     private void createPhrase(Member member, TextChannel channel, Guild guild, GuildSettings guildSettings) {
         dialogHandler.startDialog(guild, channel, member, "Choose match type: **regex/plain**.",
                 new Dialog() {
+                    private final String command = null;
                     private PhraseType phraseType = null;
                     private String phrase = null;
                     private Boolean caseSensitive = null;
-                    private String command = null;
 
                     @Override
                     public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
@@ -984,8 +984,8 @@ public class CommandListener extends ListenerAdapter {
         dialogHandler.startDialog(guild, channel, member,
                 "Please select a application.\n" + userApplicationNames,
                 new Dialog() {
-                    private Application application;
                     private final Set<User> users = new HashSet<>();
+                    private Application application;
 
                     @Override
                     public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {
@@ -1024,8 +1024,8 @@ public class CommandListener extends ListenerAdapter {
         dialogHandler.startDialog(guild, channel, member,
                 "Please select a application.\n" + userApplicationNames,
                 new Dialog() {
-                    private Application application;
                     private final Set<User> users = new HashSet<>();
+                    private Application application;
 
                     @Override
                     public boolean invoke(Guild guild, TextChannel channel, Member member, Message message) {

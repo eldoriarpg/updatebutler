@@ -18,11 +18,12 @@ public final class TextFormatting {
     }
 
     /**
-     * Appends white spaces to a string to match the given length.
-     * Returns input if fill is smaller or equal string.length()
+     * Appends white spaces to a string to match the given length. Returns input if fill is smaller or equal
+     * string.length()
      *
      * @param string String to fill
      * @param fill   Desired String length
+     *
      * @return filled string.
      */
     public static String fillString(String string, int fill) {
@@ -40,6 +41,7 @@ public final class TextFormatting {
      * @param source    source array
      * @param from      start index (included). Use negative counts to count from the last index.
      * @param to        end index (excluded). Use negative counts to count from the last index.
+     *
      * @return range as string
      */
     public static String getRangeAsString(String delimiter, String[] source, int from, int to) {
@@ -60,13 +62,13 @@ public final class TextFormatting {
     }
 
     /**
-     * Trims a text to the desired length.
-     * Returns unmodified input if max chars is larger or equal string.length().
+     * Trims a text to the desired length. Returns unmodified input if max chars is larger or equal string.length().
      *
      * @param string      String to trim
      * @param endSequence end sequence which should be append at the end of the string. included in max chars.
      * @param maxChars    max char length.
      * @param keepWords   true if no word should be cut.
+     *
      * @return String with length of maxChars of shorter.
      */
     public static String cropText(String string, String endSequence, int maxChars, boolean keepWords) {
@@ -98,6 +100,7 @@ public final class TextFormatting {
      * @param bool    boolean value
      * @param trueTo  value if true
      * @param falseTo value if false
+     *
      * @return bool as string representative.
      */
     public static String mapBooleanTo(boolean bool, String trueTo, String falseTo) {
@@ -109,6 +112,7 @@ public final class TextFormatting {
      *
      * @param collection  Collection to determine the row size.
      * @param columnNames Determines the name and amount of the columns. Empty column names are possible
+     *
      * @return new Table builder object.
      */
     public static TableBuilder getTableBuilder(Collection<?> collection, @NotNull String... columnNames) {
@@ -180,8 +184,8 @@ public final class TextFormatting {
         }
 
         /**
-         * The pointer starts at 0. Row zero can only be set on object creation.
-         * use next() before you set the first row.
+         * The pointer starts at 0. Row zero can only be set on object creation. use next() before you set the first
+         * row.
          */
         public void next() {
             rowPointer++;
@@ -191,6 +195,7 @@ public final class TextFormatting {
          * Set the markdown for the table code block.
          *
          * @param markdown Markdown code (i.e. java, md, csharp)
+         *
          * @return self instance with highlighting set
          */
         public TableBuilder setHighlighting(@NotNull String markdown) {
@@ -202,6 +207,7 @@ public final class TextFormatting {
          * Set the space between the columns.
          *
          * @param padding number between 1 and 10
+         *
          * @return self instance with padding set
          */
         public TableBuilder setPadding(int padding) {

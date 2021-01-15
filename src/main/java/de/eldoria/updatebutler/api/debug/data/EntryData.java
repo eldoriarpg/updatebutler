@@ -1,8 +1,8 @@
 package de.eldoria.updatebutler.api.debug.data;
 
-import lombok.Getter;
+import lombok.Data;
 
-@Getter
+@Data
 public class EntryData {
     protected String name;
     protected String content;

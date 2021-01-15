@@ -22,7 +22,7 @@ public class WebAPI {
 
     public WebAPI(Configuration configuration, DataSource source) {
         initAPI(configuration);
-        debugAPI = new DebugAPI(source);
+        debugAPI = new DebugAPI(source, configuration);
         updatesAPI = new UpdatesAPI(configuration);
     }
 
@@ -57,7 +57,6 @@ public class WebAPI {
                     request.body());
             response.header("Access-Control-Allow-Origin", "*");
             response.header("Access-Control-Allow-Headers", "*");
-
         });
     }
 }

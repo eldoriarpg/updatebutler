@@ -1,58 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="author" content="Eldoria">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="author" content="Taminoful">
+    <meta name="description" content="Eldoria Debug Report ID: {{ reportId }}">
 
     <meta property="og:title" content="{{ title }}">
-    <meta property="og:description" content="Report ID: {{ reportId }}">
+    <meta property="og:description" content="Eldoria Debug Report ID: {{ reportId }}">
     <meta property="og:image" content="{{ favicon }}">
     <meta property="og:url" content="{{ pageUrl }}">
 
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="theme-color" content="#2563eb">
+    <meta name="theme-color" content="#5A0009">
 
     <link rel="apple-touch-icon-precomposed" href="{{ favicon }}">
     <link rel="icon" href="{{ favicon }}">
 
     <title>{{ title }}</title>
 
-    <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://plugins.eldoria.de/tailwind.css" integrity="sha256-fOdJwC8kjTg7yvNMINUANdwtT9YNGntTrDdKQJRUX74= sha384-KDoH+ofwkVKPwcfIgpotLitVupm1XwUESYz05kV4ui0lCm/o8yW8uQ8OZH51HCM2 sha512-XSH4XA8zDj5i0aoELl5bPMDKXjC4PpIrKYua2Uq0eO1mSBZbKJgVehbgGX2JevJz19IttL5mvtJB2eSUQtAw/A==" crossorigin="anonymous">
 </head>
-<body class="flex flex-col min-h-screen">
+<body class="flex flex-col min-h-screen bg-eldoria-background">
 
-<header class="flex justify-center bg-blue-600 text-white h-24">
+<header class="flex justify-center bg-eldoria-header text-white h-24">
     <div class="flex flex-col self-center">
-        <h1 class="flex flex-row font-semibold text-4xl mb-2">{{ title }}</h1>
+        <h1 class="flex flex-row place-self-center font-semibold text-4xl mb-2">{{ title }}</h1>
         <h2 class="flex flex-row place-self-center">Report ID: {{ reportId }}</h2>
     </div>
 </header>
 
-<main class="flex flex-wrap space-y-6 p-6 mb-auto">
+<main class="flex flex-wrap space-y-6 p-0 pt-6 sm:p-6 mb-auto">
 
     {{ content }}
 
 </main>
 
-<footer class="flex bg-blue-600 text-white p-8">
+<footer class="flex flex-wrap bg-eldoria-header text-white p-8">
 
-    <figure class="flex w-1/3 self-center" role="figure">
+    <figure class="flex w-full place-content-center md:w-1/3 md:place-content-start" role="figure">
         <a href="https://github.com/EldoriaRPG" target="_blank" rel="nofollow noopener">
-            <img class="object-scale-down h-16" src="https://github.githubassets.com/images/modules/logos_page/GitHub-Logo.png" alt="GitHub Text Logo"/>
+            <img class="object-scale-down h-20 w-auto" src="https://eldoria.de/public/GitHub_Logo_White.png"
+                 loading="lazy" alt="GitHub Text Logo"/>
         </a>
         <figcaption class="sr-only">GitHub Text Logo</figcaption>
     </figure>
 
-    <figure class="flex w-1/3 justify-center" role="figure">
+    <figure class="flex w-full place-content-center md:w-1/3 md:justify-center md:place-content-start" role="figure">
         <a href="https://discord.gg/rfRuUge" target="_blank" rel="nofollow noopener">
-            <img class="flex self-center" src="https://discordapp.com/api/guilds/718502316940066927/embed.png?style=banner2" alt="Discord Invite Link for Eldoria Plugins"/>
+            <img class="flex self-center h-auto w-auto"
+                 src="https://discordapp.com/api/guilds/718502316940066927/embed.png?style=banner2" loading="lazy"
+                 alt="Discord Invite Link for Eldoria Plugins"/>
         </a>
         <figcaption class="sr-only">Discord Invite Link for Eldoria Plugins</figcaption>
     </figure>
 
-    <p class="flex w-1/3 justify-end self-end text-lg">
-        By Eldoria <span class="text-red-500 ml-1 mr-1">&#x2764;</span> 2021
+    <p class="flex w-full place-content-center text-lg mt-2 md:w-1/3 md:justify-end md:self-end md:mt-0">
+        By Eldoria <span class="ml-1 mr-1">&#x2764;</span> 2021
     </p>
 
 </footer>

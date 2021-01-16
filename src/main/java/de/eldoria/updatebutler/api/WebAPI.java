@@ -1,15 +1,21 @@
 package de.eldoria.updatebutler.api;
 
+import com.google.api.client.http.HttpStatusCodes;
 import de.eldoria.updatebutler.api.debug.DebugAPI;
 import de.eldoria.updatebutler.api.updates.UpdatesAPI;
 import de.eldoria.updatebutler.config.Configuration;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.time.temporal.ChronoUnit;
 import java.util.stream.Collectors;
 
 import static spark.Spark.before;
+import static spark.Spark.get;
+import static spark.Spark.halt;
 import static spark.Spark.ipAddress;
 import static spark.Spark.options;
 import static spark.Spark.port;
@@ -48,6 +54,22 @@ public class WebAPI {
             return "OK";
         });
 
+        get("/:file", ((request, response) -> {
+            String params = request.params(":file");
+            if ("tailwind.css".equals(params)) {
+                try (BufferedReader inputStream = new BufferedReader(
+                        new InputStreamReader(getClass().getClassLoader().getResourceAsStream("tailwind.css")))) {
+                    response.status(HttpStatusCodes.STATUS_CODE_OK);
+                    response.header("content-type", "text/css");
+                    response.body(inputStream.lines().collect(Collectors.joining(System.lineSeparator())));
+                } catch (IOException e) {
+                    log.error("Could not load css stylesheet", e);
+                    halt(HttpStatusCodes.STATUS_CODE_NOT_FOUND);
+                }
+            }
+            return response.body();
+        }));
+
         before((request, response) -> {
             log.trace("Received request on route: {} {}\nHeaders:\n{}\nBody:\n{}",
                     request.requestMethod() + " " + request.uri(),
@@ -57,6 +79,7 @@ public class WebAPI {
                     request.body());
             response.header("Access-Control-Allow-Origin", "*");
             response.header("Access-Control-Allow-Headers", "*");
+            response.header("Content-Security-Policy", "default-src 'self'; script-src 'none'; frame-src 'none'; style-src 'self'; img-src eldoria.de discordapp.com; media-src 'none'");
         });
     }
 }

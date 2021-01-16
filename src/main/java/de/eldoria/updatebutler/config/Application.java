@@ -4,6 +4,7 @@ import com.google.common.hash.Hashing;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import de.eldoria.updatebutler.util.ArgumentParser;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -23,10 +24,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Data
 public class Application {
     @Expose
     private final Set<Long> owner;
-    @Getter
     @Expose
     private final String webhook;
     @Expose
@@ -34,38 +35,26 @@ public class Application {
     /**
      * The id of the application. immutable
      */
-    @Getter
-    @Setter
     @Expose
     private int id;
     /**
      * A unique string identifier for this application. mutable.
      */
-    @Getter
-    @Setter
     @Expose
     private String identifier;
     /**
      * The display name of the application
      */
-    @Getter
-    @Setter
     @SerializedName("display_name")
     @Expose
     private String displayName;
     /**
      * Short description of the application
      */
-    @Getter
-    @Setter
     @Expose
     private String description;
-    @Getter
-    @Setter
     @Expose
     private String[] alias;
-    @Getter
-    @Setter
     @Expose
     private Long channel;
 

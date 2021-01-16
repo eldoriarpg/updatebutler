@@ -3,28 +3,29 @@ package de.eldoria.updatebutler.config;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import de.eldoria.updatebutler.util.C;
+import lombok.Data;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
 
-@Getter
+@Data
 public class Release {
 
     @Expose
-    private final String version;
+    private String version;
     @Expose
-    private final String title;
+    private String title;
     @Expose
-    private final String patchnotes;
+    private String patchnotes;
     @SerializedName("dev_build")
     @Expose
-    private final boolean devBuild;
+    private boolean devBuild;
     @Expose
-    private final String published;
+    private String published;
     @Expose
-    private final String file;
+    private String file;
     @Expose
-    private final String checksum;
+    private String checksum;
     @Expose
     private int downloads;
 

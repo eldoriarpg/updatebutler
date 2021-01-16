@@ -10,6 +10,7 @@ import de.eldoria.updatebutler.config.phrase.Phrase;
 import de.eldoria.updatebutler.config.util.GsonAdapter;
 import de.eldoria.updatebutler.listener.ReleaseCreateListener;
 import de.eldoria.updatebutler.util.FileUtil;
+import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,6 +25,7 @@ import java.util.Optional;
 import static de.eldoria.updatebutler.util.FileUtil.home;
 
 @Slf4j
+@Data
 public class Configuration {
 
     private static final Gson GSON = new GsonBuilder()
@@ -35,27 +37,21 @@ public class Configuration {
             .registerTypeAdapter(Phrase.class,
                     new GsonAdapter<Phrase>("de.eldoria.updatebutler.config.phrase"))
             .create();
-    @Getter
     @Expose
-    private final String token = "";
-    @Getter
+    private String token = "";
     @Expose
-    private final String hostName = "";
-    @Getter
+    private String hostName = "";
     @Expose
-    private final String host = "";
-    @Getter
+    private String host = "";
     @Expose
-    private final int port = 19050;
+    private int port = 19050;
     @SerializedName("guildSettings")
-    @Expose
     @Getter
-    private final HashMap<String, GuildSettings> guildSettings = new HashMap<>();
+    private HashMap<String, GuildSettings> guildSettings = new HashMap<>();
     private ReleaseCreateListener listener;
     @Expose
     private int currentId = 0;
     @Expose
-    @Getter
     private DBSettings dbSettings;
 
     public static Configuration load() throws IOException {

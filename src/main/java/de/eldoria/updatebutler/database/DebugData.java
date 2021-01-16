@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import de.eldoria.updatebutler.api.debug.DebugPayload;
 import de.eldoria.updatebutler.api.debug.DebugResponse;
 import de.eldoria.updatebutler.api.debug.data.EntryData;
+import de.eldoria.updatebutler.api.debug.data.LogData;
 import de.eldoria.updatebutler.api.debug.data.PluginMetaData;
 import de.eldoria.updatebutler.api.debug.data.ServerMetaData;
 import lombok.extern.slf4j.Slf4j;
@@ -57,11 +58,11 @@ public class DebugData {
 
         try (Connection conn = source.getConnection();
              PreparedStatement stmt = conn.prepareStatement(
-                     "INSERT into debug_data(id, plugin_meta, server_meta, log, additional_data) VALUES (?,?,?,?,?)")) {
+                     "INSERT into debug_data(id, plugin_meta, server_meta, log_meta, additional_data) VALUES (?,?,?,?,?)")) {
             stmt.setInt(1, id);
             stmt.setString(2, gson.toJson(payload.getPluginMeta()));
             stmt.setString(3, gson.toJson(payload.getServerMeta()));
-            stmt.setString(4, payload.getLatestLog());
+            stmt.setString(4, gson.toJson(payload.getLatestLog()));
             stmt.setString(5, gson.toJson(payload.getAdditionalPluginMeta()));
             stmt.execute();
         } catch (SQLException e) {
@@ -121,20 +122,20 @@ public class DebugData {
 
     public Optional<DebugPayload> loadDebug(Integer id) {
         PluginMetaData pluginMeta;
-        String latestLog;
+        LogData latestLog;
         ServerMetaData serverMeta;
         EntryData[] additionalMeta;
 
         try (Connection conn = source.getConnection();
              PreparedStatement stmt = conn.prepareStatement(
-                     "Select log, plugin_meta, server_meta, additional_data from debug_data where id = ?")) {
+                     "Select log_meta, plugin_meta, server_meta, additional_data from debug_data where id = ?")) {
             stmt.setInt(1, id);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 pluginMeta = gson.fromJson(rs.getString("plugin_meta"), PluginMetaData.class);
                 serverMeta = gson.fromJson(rs.getString("server_meta"), ServerMetaData.class);
                 additionalMeta = gson.fromJson(rs.getString("additional_data"), EntryData[].class);
-                latestLog = rs.getString("log");
+                latestLog = gson.fromJson(rs.getString("log_meta"), LogData.class);
             } else {
                 return Optional.empty();
             }

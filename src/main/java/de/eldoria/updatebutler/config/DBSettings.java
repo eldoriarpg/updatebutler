@@ -1,9 +1,10 @@
 package de.eldoria.updatebutler.config;
 
 import com.google.gson.annotations.Expose;
+import lombok.Data;
 import lombok.Getter;
 
-@Getter
+@Data
 public class DBSettings implements Cloneable {
     @Expose
     private String address = "";

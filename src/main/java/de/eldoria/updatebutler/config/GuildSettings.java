@@ -4,6 +4,7 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import de.eldoria.updatebutler.config.commands.UserCommand;
 import de.eldoria.updatebutler.config.phrase.Phrase;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import net.dv8tion.jda.api.Permission;
@@ -20,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 
-@Getter
+@Data
 public class GuildSettings {
     @SerializedName("allowed_users")
     @Expose

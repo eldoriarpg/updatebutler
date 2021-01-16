@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.stream.Collectors;
 
+import static spark.Spark.before;
 import static spark.Spark.get;
 import static spark.Spark.path;
 import static spark.Spark.post;
@@ -33,10 +34,15 @@ public class DebugAPI {
     private final Configuration configuration;
     private final RateLimiter submitLimiter = new RateLimiter(10, ChronoUnit.SECONDS);
 
-    private final String content =
+    private static final String CONTENT =
             "    <section class=\"w-full shadow-sm\">\n" +
-                    "        <h3 class=\"text-white text-xl bg-indigo-500 p-2\">{{ contentTitle }}</h3>\n" +
-                    "        <pre class=\"whitespace-pre-wrap bg-gray-200 p-2\">{{ content }}</pre>\n" +
+                    "        <details class=\"cursor-pointer\">\n" +
+                    "            <summary class=\"flex items-center bg-eldoria-accent text-white p-2 outline-none select-none\">\n" +
+                    "                <h3 class=\"text-xl\">{{ contentTitle }}</h3>\n" +
+                    "            </summary>\n" +
+                    "\n" +
+                    "            <pre class=\"whitespace-pre-wrap bg-eldoria-input p-2\">{{ content }}</pre>\n" +
+                    "        </details>\n" +
                     "    </section>\n";
 
     private final String pageTemplate;
@@ -57,8 +63,11 @@ public class DebugAPI {
     private void init() {
         path("/debug", () -> {
             path("/v1", () -> {
+                before();
+
                 post("/submit", (request, response) -> {
                     submitLimiter.assertRateLimit(request);
+
                     DebugPayload debugPayload = gson.fromJson(request.body(), DebugPayload.class);
                     Optional<DebugResponse> data = debugData.submitDebug(debugPayload);
                     if (data.isPresent()) {
@@ -129,7 +138,17 @@ public class DebugAPI {
                     for (EntryData entryData : payload.getAdditionalPluginMeta()) {
                         contents.add(getContent(entryData.getName(), entryData.getContent()));
                     }
-                    contents.add(getContent("Latest.log", payload.getLatestLog()));
+
+                    contents.add(getContent("Latest.log", payload.getLatestLog().getLog()));
+                    if (payload.getLatestLog().getInternalExceptions().length != 0) {
+                        contents.add(getContent("Internal Exceptions and Warnings",
+                                String.join("\n\n", payload.getLatestLog().getInternalExceptions())));
+                    }
+
+                    if (payload.getLatestLog().getExceptions().length != 0) {
+                        contents.add(getContent("External Exceptions and Warnings",
+                                String.join("\n\n", payload.getLatestLog().getExceptions())));
+                    }
 
                     for (EntryData configDump : payload.getConfigDumps()) {
                         contents.add(getContent(configDump.getName(), configDump.getContent()));
@@ -151,7 +170,7 @@ public class DebugAPI {
     }
 
     private String getContent(String title, Object content) {
-        return this.content.replace("{{ contentTitle }}", title).replace("{{ content }}", content.toString());
+        return CONTENT.replace("{{ contentTitle }}", title).replace("{{ content }}", content.toString());
     }
 
 }

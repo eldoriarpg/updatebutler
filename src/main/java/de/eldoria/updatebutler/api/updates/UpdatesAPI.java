@@ -54,10 +54,6 @@ public class UpdatesAPI {
 
             Optional<Release> optionalRelease = application.get().getRelease(version);
 
-            if (optionalRelease.isEmpty()) {
-                response.status(HttpStatusCodes.STATUS_CODE_OK);
-                return GSON.toJson(new UpdateCheckResponse(false, null, null));
-            }
 
             Optional<Release> latestRelease;
 
@@ -73,6 +69,11 @@ public class UpdatesAPI {
             }
 
             Release release = latestRelease.get();
+
+            if (optionalRelease.isEmpty()) {
+                response.status(HttpStatusCodes.STATUS_CODE_OK);
+                return GSON.toJson(new UpdateCheckResponse(true, release.getVersion(), release.getChecksum()));
+            }
 
             if (release.getPublished().isAfter(optionalRelease.get().getPublished())) {
                 return GSON.toJson(new UpdateCheckResponse(true, release.getVersion(), release.getChecksum()));

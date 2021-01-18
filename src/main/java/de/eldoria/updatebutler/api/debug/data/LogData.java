@@ -5,12 +5,14 @@ import lombok.Data;
 @Data
 public class LogData {
     private String log;
+    private String pluginLog;
     private String[] internalExceptions;
-    private String[] exceptions;
+    private String[] externalExceptions;
 
-    public LogData(String log, String[] internalExceptions, String[] exceptions) {
+    public LogData(String log,String pluginLog, String[] internalExceptions, String[] externalExceptions) {
         this.log = log;
+        this.pluginLog = pluginLog;
         this.internalExceptions = internalExceptions;
-        this.exceptions = exceptions;
+        this.externalExceptions = externalExceptions;
     }
 }

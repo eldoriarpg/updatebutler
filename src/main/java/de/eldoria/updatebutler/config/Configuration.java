@@ -46,7 +46,7 @@ public class Configuration {
     @Expose
     private int port = 19050;
     @SerializedName("guildSettings")
-    @Getter
+    @Expose
     private HashMap<String, GuildSettings> guildSettings = new HashMap<>();
     private ReleaseCreateListener listener;
     @Expose

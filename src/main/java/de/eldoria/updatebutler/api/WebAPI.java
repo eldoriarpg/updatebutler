@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.time.temporal.ChronoUnit;
 import java.util.stream.Collectors;
 
+import static spark.Spark.afterAfter;
 import static spark.Spark.before;
 import static spark.Spark.get;
 import static spark.Spark.halt;
@@ -54,7 +55,7 @@ public class WebAPI {
             return "OK";
         });
 
-        get("/:file", ((request, response) -> {
+        get("/assets/:file", ((request, response) -> {
             String params = request.params(":file");
             if ("tailwind.css".equals(params)) {
                 try (BufferedReader inputStream = new BufferedReader(
@@ -76,10 +77,20 @@ public class WebAPI {
                     request.queryString(),
                     request.headers().stream().map(h -> "   " + h + ": " + request.headers(h))
                             .collect(Collectors.joining("\n")),
-                    request.body());
+                    request.body().substring(0, Math.min(request.body().length(), 180)));
             response.header("Access-Control-Allow-Origin", "*");
             response.header("Access-Control-Allow-Headers", "*");
             response.header("Content-Security-Policy", "default-src 'self'; script-src 'none'; frame-src 'none'; style-src 'self'; img-src eldoria.de discordapp.com; media-src 'none'");
         });
+
+        afterAfter(((request, response) -> {
+            log.trace("Answered request on route: {} {}\nStatus: {}\nHeaders:\n{}\nBody:\n{}",
+                    request.requestMethod() + " " + request.uri(),
+                    request.queryString(),
+                    response.raw().getStatus(),
+                    response.raw().getHeaderNames().stream().map(h -> "   " + h + ": " + response.raw().getHeader(h))
+                            .collect(Collectors.joining("\n")),
+                    response.body().substring(0, Math.min(response.body().length(), 180)));
+        }));
     }
 }

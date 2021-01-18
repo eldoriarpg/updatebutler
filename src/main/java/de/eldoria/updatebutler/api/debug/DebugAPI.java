@@ -41,10 +41,9 @@ public class DebugAPI {
                     "                <h3 class=\"text-xl\">{{ contentTitle }}</h3>\n" +
                     "            </summary>\n" +
                     "\n" +
-                    "            <pre class=\"whitespace-pre-wrap bg-eldoria-input p-2\">{{ content }}</pre>\n" +
+                    "            <pre class=\"whitespace-pre-wrap bg-eldoria-input break-all sm:break-normal p-2\">{{ content }}</pre>\n" +
                     "        </details>\n" +
                     "    </section>\n";
-
     private final String pageTemplate;
 
     public DebugAPI(DataSource source, Configuration configuration) {
@@ -140,14 +139,16 @@ public class DebugAPI {
                     }
 
                     contents.add(getContent("Latest.log", payload.getLatestLog().getLog()));
+                    contents.add(getContent("Plugin Log", payload.getLatestLog().getPluginLog()));
+
                     if (payload.getLatestLog().getInternalExceptions().length != 0) {
                         contents.add(getContent("Internal Exceptions and Warnings",
                                 String.join("\n\n", payload.getLatestLog().getInternalExceptions())));
                     }
 
-                    if (payload.getLatestLog().getExceptions().length != 0) {
+                    if (payload.getLatestLog().getExternalExceptions().length != 0) {
                         contents.add(getContent("External Exceptions and Warnings",
-                                String.join("\n\n", payload.getLatestLog().getExceptions())));
+                                String.join("\n\n", payload.getLatestLog().getExternalExceptions())));
                     }
 
                     for (EntryData configDump : payload.getConfigDumps()) {

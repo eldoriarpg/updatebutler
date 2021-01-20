@@ -63,6 +63,7 @@ public final class UpdateButler {
             min = 14;
         }
         int sec = 60 - (LocalDateTime.now().get(ChronoField.SECOND_OF_MINUTE));
+        sec += 15;
         log.info("Next time channel update in {} min {} sec", min, sec);
         executorService.scheduleAtFixedRate(new TimeChannelScheduler(shardManager, configuration), min * 60 + sec, 60 * 15, TimeUnit.SECONDS);
     }

@@ -5,7 +5,6 @@ import com.google.gson.annotations.SerializedName;
 import de.eldoria.updatebutler.config.commands.UserCommand;
 import de.eldoria.updatebutler.config.phrase.Phrase;
 import lombok.Data;
-import lombok.Getter;
 import lombok.Setter;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
@@ -114,7 +113,7 @@ public class GuildSettings {
 
     public String getUserCommands() {
         if (userCommands.isEmpty()) return "";
-        return userCommands.stream().map(c -> "`" + c.getCommand() + "`").collect(Collectors.joining(", "));
+        return userCommands.stream().map(c -> "`" + c.command() + "`").collect(Collectors.joining(", "));
     }
 
     public String getApplicationCommands() {

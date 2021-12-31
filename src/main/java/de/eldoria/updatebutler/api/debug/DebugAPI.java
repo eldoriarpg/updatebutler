@@ -1,15 +1,13 @@
 package de.eldoria.updatebutler.api.debug;
 
-import com.google.api.client.http.HttpStatusCodes;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import de.eldoria.updatebutler.api.RateLimiter;
 import de.eldoria.updatebutler.api.debug.data.EntryData;
 import de.eldoria.updatebutler.api.debug.data.PluginMetaData;
 import de.eldoria.updatebutler.config.Configuration;
 import de.eldoria.updatebutler.database.DebugData;
 import io.javalin.Javalin;
-import lombok.extern.slf4j.Slf4j;
+import org.eclipse.jetty.http.HttpStatus;
+import org.slf4j.Logger;
 
 import javax.sql.DataSource;
 import java.io.BufferedReader;
@@ -21,10 +19,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-@Slf4j
-public class DebugAPI {
+import static io.javalin.apibuilder.ApiBuilder.get;
+import static io.javalin.apibuilder.ApiBuilder.path;
+import static org.slf4j.LoggerFactory.getLogger;
 
-    private final Gson gson = new GsonBuilder().serializeNulls().create();
+public class DebugAPI {
+    private static final Logger log = getLogger(DebugAPI.class);
     private Javalin debugApi;
     private final DebugData debugData;
     private final Configuration configuration;
@@ -57,104 +57,106 @@ public class DebugAPI {
     }
 
     private void init() {
-        debugApi.get("/debug/v1/submit", ctx -> {
-            submitLimiter.assertRateLimit(ctx);
+        debugApi.routes(() -> {
+            path("debug", () -> {
+                path("v1", () -> {
+                    get("submit", ctx -> {
+                        submitLimiter.assertRateLimit(ctx);
 
-            DebugPayload debugPayload = gson.fromJson(ctx.body(), DebugPayload.class);
-            Optional<DebugResponse> data = debugData.submitDebug(debugPayload);
-            if (data.isPresent()) {
-                ctx.status(HttpStatusCodes.STATUS_CODE_OK).json(data.get());
-                return;
-            }
-            ctx.status(HttpStatusCodes.STATUS_CODE_UNPROCESSABLE_ENTITY);
-            return;
-        });
+                        DebugPayload debugPayload = ctx.bodyAsClass(DebugPayload.class);
+                        Optional<DebugResponse> data = debugData.submitDebug(debugPayload);
+                        if (data.isPresent()) {
+                            ctx.status(HttpStatus.OK_200).json(data.get());
+                            return;
+                        }
+                        ctx.status(HttpStatus.UNPROCESSABLE_ENTITY_422);
+                    });
+                    // Todo change page to return a page with a button to send post request.
+                    get("delete/{hash}", ctx -> {
+                        String hash = ctx.pathParam("hash");
 
-        // Todo change page to return a page with a button to send post request.
-        debugApi.get("/debug/v1/delete/{hash}", ctx -> {
-            String hash = ctx.pathParam("hash");
+                        if (hash == null) {
+                            ctx.status(HttpStatus.NOT_FOUND_404).result("Please provide the deletion hash.");
+                            return;
+                        }
 
-            if (hash == null) {
-                ctx.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND).result("Please provide the deletion hash.");
-                return;
-            }
+                        var id = debugData.getIdFromDeletionHash(hash);
 
-            var id = debugData.getIdFromDeletionHash(hash);
+                        if (id.isEmpty()) {
+                            ctx.status(HttpStatus.NOT_FOUND_404).result("Invalid hash.");
+                            return;
+                        }
 
-            if (id.isEmpty()) {
-                ctx.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND).result("Invalid hash.");
-                return;
-            }
+                        debugData.deleteDebug(id.get());
 
-            debugData.deleteDebug(id.get());
+                        var page = pageTemplate.replace("{{ reportId }}", "none");
+                        page = page.replace("{{ title }}", "Report deleted.");
+                        page = page.replace("{{ pageUrl }}", configuration.getHostName() + "/debug/v1/delete/" + hash);
+                        page = page.replace("{{ favicon }}", "https://eldoria.de/favicon-196x196.png");
+                        page = page.replace("{{ content }}", "");
 
-            var page = pageTemplate.replace("{{ reportId }}", "none");
-            page = page.replace("{{ title }}", "Report deleted.");
-            page = page.replace("{{ pageUrl }}", configuration.getHostName() + "/debug/v1/delete/" + hash);
-            page = page.replace("{{ favicon }}", "https://eldoria.de/favicon-196x196.png");
-            page = page.replace("{{ content }}", "");
+                        ctx.result(page).status(HttpStatus.OK_200);
+                    });
+                    get("read/{hash}", ctx -> {
+                        String hash = ctx.pathParam("hash");
 
-            ctx.result(page).status(HttpStatusCodes.STATUS_CODE_OK);
-        });
+                        if (hash == null) {
+                            ctx.status(HttpStatus.NOT_FOUND_404).result("Please provide the deletion hash.");
+                            return;
+                        }
 
+                        var id = debugData.getIdFromHash(hash);
 
-        debugApi.get("/debug/v1/read/{hash}", ctx -> {
-            String hash = ctx.pathParam("hash");
+                        if (id.isEmpty()) {
+                            ctx.status(HttpStatus.NOT_FOUND_404).result("Invalid hash.");
+                            return;
+                        }
 
-            if (hash == null) {
-                ctx.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND).result("Please provide the deletion hash.");
-                return;
-            }
+                        var debugPayload = debugData.loadDebug(id.get());
+                        if (debugPayload.isEmpty()) {
+                            ctx.status(HttpStatus.NOT_FOUND_404);
+                            return;
+                        }
 
-            var id = debugData.getIdFromHash(hash);
+                        ctx.contentType("text/html");
 
-            if (id.isEmpty()) {
-                ctx.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND).result("Invalid hash.");
-                return;
-            }
+                        var payload = debugPayload.get();
 
-            var debugPayload = debugData.loadDebug(id.get());
-            if (debugPayload.isEmpty()) {
-                ctx.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND);
-                return;
-            }
+                        List<String> contents = new ArrayList<>();
+                        PluginMetaData pluginMeta = payload.pluginMeta();
+                        contents.add(getContent("Plugin Meta", payload.pluginMeta()));
+                        contents.add(getContent("Server Meta", payload.serverMeta()));
+                        for (EntryData entryData : payload.additionalPluginMeta()) {
+                            contents.add(getContent(entryData.getName(), entryData.getContent()));
+                        }
 
-            ctx.contentType("text/html");
+                        contents.add(getContent("Latest.log", payload.latestLog().getLog()));
+                        contents.add(getContent("Plugin Log", payload.latestLog().getPluginLog()));
 
-            var payload = debugPayload.get();
+                        if (payload.latestLog().getInternalExceptions().length != 0) {
+                            contents.add(getContent("Internal Exceptions and Warnings",
+                                    String.join("\n\n", payload.latestLog().getInternalExceptions())));
+                        }
 
-            List<String> contents = new ArrayList<>();
-            PluginMetaData pluginMeta = payload.pluginMeta();
-            contents.add(getContent("Plugin Meta", payload.pluginMeta()));
-            contents.add(getContent("Server Meta", payload.serverMeta()));
-            for (EntryData entryData : payload.additionalPluginMeta()) {
-                contents.add(getContent(entryData.getName(), entryData.getContent()));
-            }
+                        if (payload.latestLog().getExternalExceptions().length != 0) {
+                            contents.add(getContent("External Exceptions and Warnings",
+                                    String.join("\n\n", payload.latestLog().getExternalExceptions())));
+                        }
 
-            contents.add(getContent("Latest.log", payload.latestLog().getLog()));
-            contents.add(getContent("Plugin Log", payload.latestLog().getPluginLog()));
+                        for (EntryData configDump : payload.configDumps()) {
+                            contents.add(getContent(configDump.getName(), configDump.getContent()));
+                        }
 
-            if (payload.latestLog().getInternalExceptions().length != 0) {
-                contents.add(getContent("Internal Exceptions and Warnings",
-                        String.join("\n\n", payload.latestLog().getInternalExceptions())));
-            }
+                        String page = pageTemplate.replace("{{ content }}", String.join("\n", contents));
+                        page = page.replace("{{ reportId }}", hash);
+                        page = page.replace("{{ title }}", "Report created for " + pluginMeta.getName() + " - " + pluginMeta.getVersion());
+                        page = page.replace("{{ pageUrl }}", configuration.getHostName() + "/debug/v1/read/" + hash);
+                        page = page.replace("{{ favicon }}", "https://eldoria.de/favicon-196x196.png");
 
-            if (payload.latestLog().getExternalExceptions().length != 0) {
-                contents.add(getContent("External Exceptions and Warnings",
-                        String.join("\n\n", payload.latestLog().getExternalExceptions())));
-            }
-
-            for (EntryData configDump : payload.configDumps()) {
-                contents.add(getContent(configDump.getName(), configDump.getContent()));
-            }
-
-            String page = pageTemplate.replace("{{ content }}", String.join("\n", contents));
-            page = page.replace("{{ reportId }}", hash);
-            page = page.replace("{{ title }}", "Report created for " + pluginMeta.getName() + " - " + pluginMeta.getVersion());
-            page = page.replace("{{ pageUrl }}", configuration.getHostName() + "/debug/v1/read/" + hash);
-            page = page.replace("{{ favicon }}", "https://eldoria.de/favicon-196x196.png");
-
-            ctx.result(page).contentType("text/html").status(HttpStatusCodes.STATUS_CODE_OK);
+                        ctx.result(page).contentType("text/html").status(HttpStatus.OK_200);
+                    });
+                });
+            });
         });
     }
 

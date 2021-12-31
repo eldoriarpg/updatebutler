@@ -11,10 +11,12 @@ import de.eldoria.updatebutler.api.debug.data.EntryData;
 import de.eldoria.updatebutler.api.debug.data.LogData;
 import de.eldoria.updatebutler.api.debug.data.PluginMetaData;
 import de.eldoria.updatebutler.api.debug.data.ServerMetaData;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 
 import javax.sql.DataSource;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -24,16 +26,26 @@ public class DebugData extends QueryFactoryHolder {
     private final ObjectMapper mapper = new ObjectMapper();
     // private final Gson gson = new GsonBuilder().serializeNulls().create();
     private static final Logger log = getLogger(DebugData.class);
+    private MessageDigest hash;
 
     public DebugData(DataSource source) {
         super(source, QueryBuilderConfig.builder()
                 .withExceptionHandler(e -> log.error(ExceptionTransformer.prettyException("SQL Exception occured", e), e))
                 .build());
+        try {
+            hash = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            log.error("Could not create MessageDigest", e);
+        }
+    }
+
+    private String hash(String value) {
+        return new String(hash.digest(value.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
     }
 
     public Optional<DebugResponse> submitDebug(DebugPayload payload) throws JsonProcessingException {
-        var read = DigestUtils.sha1Hex(String.valueOf(System.nanoTime()));
-        var delete = DigestUtils.sha1Hex(System.nanoTime() + read);
+        var read = hash(String.valueOf(System.nanoTime()));
+        var delete = hash(System.nanoTime() + read);
         var debugId = builder(Integer.class)
                 .query("INSERT INTO debug(read_hash, deletion_hash) VALUES(?,?) RETURNING id")
                 .paramsBuilder(param -> param.setString(read).setString(delete))

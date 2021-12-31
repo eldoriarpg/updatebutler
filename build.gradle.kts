@@ -13,7 +13,7 @@ repositories {
 
 dependencies {
     implementation("commons-io:commons-io:2.11.0")
-    implementation("com.google.api-client:google-api-client:1.32.2")
+    //implementation("com.google.api-client:google-api-client:1.32.2")
     implementation("com.google.guava:guava:31.0.1-jre")
     implementation("com.fasterxml.jackson.core", "jackson-databind", "2.12.3")
     implementation("io.javalin", "javalin", "3.13.9")
@@ -36,7 +36,7 @@ dependencies {
 group = "de.eldoria"
 version = "1.0"
 description = "UpdateButler"
-java.sourceCompatibility = JavaVersion.VERSION_11
+java.sourceCompatibility = JavaVersion.VERSION_15
 
 publishing {
     publications.create<MavenPublication>("maven") {

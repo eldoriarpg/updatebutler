@@ -93,15 +93,15 @@ public final class UpdateButler {
         DBSettings settings = configuration.getDbSettings();
         Properties props = new Properties();
         props.setProperty("dataSourceClassName", "org.mariadb.jdbc.MariaDbDataSource");
-        props.setProperty("dataSource.serverName", settings.getAddress());
-        props.setProperty("dataSource.portNumber", settings.getPort());
-        props.setProperty("dataSource.user", settings.getUser());
-        props.setProperty("dataSource.password", settings.getPassword());
-        props.setProperty("dataSource.databaseName", settings.getDatabase());
+        props.setProperty("dataSource.serverName", settings.address());
+        props.setProperty("dataSource.portNumber", settings.port());
+        props.setProperty("dataSource.user", settings.user());
+        props.setProperty("dataSource.password", settings.password());
+        props.setProperty("dataSource.databaseName", settings.database());
 
         HikariConfig config = new HikariConfig(props);
 
-        config.setMaximumPoolSize(settings.getMaxConnections());
+        config.setMaximumPoolSize(settings.maxConnections());
 
         source = new HikariDataSource(config);
 

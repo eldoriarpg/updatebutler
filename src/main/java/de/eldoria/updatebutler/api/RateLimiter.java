@@ -3,6 +3,7 @@ package de.eldoria.updatebutler.api;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import io.javalin.http.Context;
 import lombok.extern.slf4j.Slf4j;
 import spark.Request;
 
@@ -28,7 +29,7 @@ public class RateLimiter {
         this.timeUnit = timeUnit;
     }
 
-    public void assertRateLimit(Request request) throws ExecutionException {
+    public void assertRateLimit(Context request) throws ExecutionException {
         String ip = request.headers("X-Real-IP");
         Instant lastAccess = rateLimit.get(ip, () -> Instant.now().minus(time + 1, timeUnit));
         if (lastAccess.isAfter(Instant.now().minus(time, timeUnit))) {

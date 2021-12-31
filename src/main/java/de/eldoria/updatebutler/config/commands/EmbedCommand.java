@@ -32,7 +32,7 @@ public class EmbedCommand extends UserCommand {
         if (embed == null) {
             buildEmbed();
         }
-        channel.sendMessage(embed).queue();
+        channel.sendMessageEmbeds(embed).queue();
     }
 
     private void buildEmbed() {

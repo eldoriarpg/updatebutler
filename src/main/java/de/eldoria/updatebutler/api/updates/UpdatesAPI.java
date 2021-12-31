@@ -9,6 +9,7 @@ import de.eldoria.updatebutler.config.Configuration;
 import de.eldoria.updatebutler.config.Release;
 import de.eldoria.updatebutler.config.ReleaseBuilder;
 import de.eldoria.updatebutler.util.C;
+import io.javalin.Javalin;
 import lombok.extern.slf4j.Slf4j;
 import spark.Request;
 import spark.Response;
@@ -29,9 +30,58 @@ public class UpdatesAPI {
     private final Configuration configuration;
     private final RateLimiter downloadLimiter = new RateLimiter(5, ChronoUnit.SECONDS);
 
-    public UpdatesAPI(Configuration configuration) {
+    public UpdatesAPI(Javalin javalin, Configuration configuration) {
         this.configuration = configuration;
 
+        javalin.get("/check", ctx -> {
+            int id;
+            try {
+                id = Integer.parseInt(ctx.queryParam("id"));
+            } catch (NumberFormatException e) {
+                ctx.result("Invalid number").status(HttpStatusCodes.STATUS_CODE_BAD_REQUEST);
+                return;
+            }
+            String version = ctx.queryParam("version");
+            boolean devBuild = Boolean.parseBoolean(ctx.queryParam("devbuild"));
+
+            Optional<Application> optApplication = configuration.getApplicationById(id);
+
+            if (optApplication.isEmpty()) {
+                ctx.json(new UpdateCheckResponse(false, null, null))
+                        .status(HttpStatusCodes.STATUS_CODE_BAD_REQUEST);
+                return;
+            }
+
+            var app = optApplication.get();
+
+            Optional<Release> optionalRelease = optApplication.get().getRelease(version);
+
+            Optional<Release> latestRelease = devBuild ? app.getLatestVersion() : app.getLatestStableVersion();
+
+            if (latestRelease.isEmpty()) {
+                ctx.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND).result("This release does not exist");
+                return;
+            }
+
+            Release release = latestRelease.get();
+
+            if (optionalRelease.isEmpty()) {
+                ctx.status(HttpStatusCodes.STATUS_CODE_OK)
+                        .json(new UpdateCheckResponse(true, release.getVersion(), release.getChecksum()));
+                return;
+            }
+
+            ctx.json(new UpdateCheckResponse(release.getPublished().isAfter(optionalRelease.get().getPublished()), release.getVersion(), release.getChecksum()))
+                    .status(HttpStatusCodes.STATUS_CODE_OK);
+        });
+        javalin.get("/download", ctx -> {
+
+        });
+        javalin.post("/download", ctx -> {
+
+        });
+
+        javalin.post("/webhook/{hash}/github")
 
         get("/check", (((request, response) -> {
             int id;

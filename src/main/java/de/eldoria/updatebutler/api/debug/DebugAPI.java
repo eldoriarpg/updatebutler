@@ -8,6 +8,7 @@ import de.eldoria.updatebutler.api.debug.data.EntryData;
 import de.eldoria.updatebutler.api.debug.data.PluginMetaData;
 import de.eldoria.updatebutler.config.Configuration;
 import de.eldoria.updatebutler.database.DebugData;
+import io.javalin.Javalin;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
@@ -18,35 +19,31 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.stream.Collectors;
-
-import static spark.Spark.before;
-import static spark.Spark.get;
-import static spark.Spark.path;
-import static spark.Spark.post;
 
 @Slf4j
 public class DebugAPI {
 
     private final Gson gson = new GsonBuilder().serializeNulls().create();
+    private Javalin debugApi;
     private final DebugData debugData;
     private final Configuration configuration;
     private final RateLimiter submitLimiter = new RateLimiter(10, ChronoUnit.SECONDS);
 
     private static final String CONTENT =
             "    <section class=\"w-full shadow-sm\">\n" +
-                    "        <details class=\"cursor-pointer\">\n" +
-                    "            <summary class=\"flex items-center bg-eldoria-accent text-white p-2 outline-none select-none\">\n" +
-                    "                <h3 class=\"text-xl\">{{ contentTitle }}</h3>\n" +
-                    "            </summary>\n" +
-                    "\n" +
-                    "            <pre class=\"whitespace-pre-wrap bg-eldoria-input break-all sm:break-normal p-2\">{{ content }}</pre>\n" +
-                    "        </details>\n" +
-                    "    </section>\n";
+            "        <details class=\"cursor-pointer\">\n" +
+            "            <summary class=\"flex items-center bg-eldoria-accent text-white p-2 outline-none select-none\">\n" +
+            "                <h3 class=\"text-xl\">{{ contentTitle }}</h3>\n" +
+            "            </summary>\n" +
+            "\n" +
+            "            <pre class=\"whitespace-pre-wrap bg-eldoria-input break-all sm:break-normal p-2\">{{ content }}</pre>\n" +
+            "        </details>\n" +
+            "    </section>\n";
     private final String pageTemplate;
 
-    public DebugAPI(DataSource source, Configuration configuration) {
+    public DebugAPI(DataSource source, Javalin javalin, Configuration configuration) {
+        debugApi = javalin;
         debugData = new DebugData(source);
         this.configuration = configuration;
         init();
@@ -60,113 +57,104 @@ public class DebugAPI {
     }
 
     private void init() {
-        path("/debug", () -> {
-            path("/v1", () -> {
-                before();
+        debugApi.get("/debug/v1/submit", ctx -> {
+            submitLimiter.assertRateLimit(ctx);
 
-                post("/submit", (request, response) -> {
-                    submitLimiter.assertRateLimit(request);
+            DebugPayload debugPayload = gson.fromJson(ctx.body(), DebugPayload.class);
+            Optional<DebugResponse> data = debugData.submitDebug(debugPayload);
+            if (data.isPresent()) {
+                ctx.status(HttpStatusCodes.STATUS_CODE_OK).json(data.get());
+                return;
+            }
+            ctx.status(HttpStatusCodes.STATUS_CODE_UNPROCESSABLE_ENTITY);
+            return;
+        });
 
-                    DebugPayload debugPayload = gson.fromJson(request.body(), DebugPayload.class);
-                    Optional<DebugResponse> data = debugData.submitDebug(debugPayload);
-                    if (data.isPresent()) {
-                        response.status(HttpStatusCodes.STATUS_CODE_OK);
-                        response.body(gson.toJson(data.get()));
-                        return response.body();
-                    }
-                    response.status(HttpStatusCodes.STATUS_CODE_UNPROCESSABLE_ENTITY);
-                    return HttpStatusCodes.STATUS_CODE_UNPROCESSABLE_ENTITY;
-                });
+        // Todo change page to return a page with a button to send post request.
+        debugApi.get("/debug/v1/delete/{hash}", ctx -> {
+            String hash = ctx.pathParam("hash");
 
-                get("/delete/:hash", ((request, response) -> {
-                    String hash = request.params(":hash");
+            if (hash == null) {
+                ctx.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND).result("Please provide the deletion hash.");
+                return;
+            }
 
-                    if (hash == null) {
-                        response.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND);
-                        return HttpStatusCodes.STATUS_CODE_NOT_FOUND + " Please provide the deletion hash.";
-                    }
+            var id = debugData.getIdFromDeletionHash(hash);
 
-                    OptionalInt id = debugData.getIdFromDeletionHash(hash);
+            if (id.isEmpty()) {
+                ctx.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND).result("Invalid hash.");
+                return;
+            }
 
-                    if (id.isEmpty()) {
-                        response.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND);
-                        return HttpStatusCodes.STATUS_CODE_NOT_FOUND + " Invalid hash.";
-                    }
+            debugData.deleteDebug(id.get());
 
-                    debugData.deleteDebug(id.getAsInt());
+            var page = pageTemplate.replace("{{ reportId }}", "none");
+            page = page.replace("{{ title }}", "Report deleted.");
+            page = page.replace("{{ pageUrl }}", configuration.getHostName() + "/debug/v1/delete/" + hash);
+            page = page.replace("{{ favicon }}", "https://eldoria.de/favicon-196x196.png");
+            page = page.replace("{{ content }}", "");
 
-                    String page = pageTemplate.replace("{{ reportId }}", "none");
-                    page = page.replace("{{ title }}", "Report deleted.");
-                    page = page.replace("{{ pageUrl }}", configuration.getHostName() + "/debug/v1/delete/" + hash);
-                    page = page.replace("{{ favicon }}", "https://eldoria.de/favicon-196x196.png");
-                    page = page.replace("{{ content }}", "");
+            ctx.result(page).status(HttpStatusCodes.STATUS_CODE_OK);
+        });
 
-                    response.body(page);
-                    response.status(HttpStatusCodes.STATUS_CODE_OK);
-                    return response.body();
-                }));
-                get("/read/:hash", ((request, response) -> {
-                    String hash = request.params(":hash");
 
-                    if (hash == null) {
-                        response.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND);
-                        return HttpStatusCodes.STATUS_CODE_NOT_FOUND + " Please provide the deletion hash.";
-                    }
+        debugApi.get("/debug/v1/read/{hash}", ctx -> {
+            String hash = ctx.pathParam("hash");
 
-                    OptionalInt id = debugData.getIdFromHash(hash);
+            if (hash == null) {
+                ctx.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND).result("Please provide the deletion hash.");
+                return;
+            }
 
-                    if (id.isEmpty()) {
-                        response.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND);
-                        return HttpStatusCodes.STATUS_CODE_NOT_FOUND + " Invalid hash.";
-                    }
+            var id = debugData.getIdFromHash(hash);
 
-                    Optional<DebugPayload> debugPayload = debugData.loadDebug(id.getAsInt());
-                    if (debugPayload.isEmpty()) {
-                        response.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND);
-                        return HttpStatusCodes.STATUS_CODE_NOT_FOUND;
-                    }
+            if (id.isEmpty()) {
+                ctx.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND).result("Invalid hash.");
+                return;
+            }
 
-                    response.type("text/html");
+            var debugPayload = debugData.loadDebug(id.get());
+            if (debugPayload.isEmpty()) {
+                ctx.status(HttpStatusCodes.STATUS_CODE_NOT_FOUND);
+                return;
+            }
 
-                    DebugPayload payload = debugPayload.get();
+            ctx.contentType("text/html");
 
-                    List<String> contents = new ArrayList<>();
-                    PluginMetaData pluginMeta = payload.getPluginMeta();
-                    contents.add(getContent("Plugin Meta", payload.getPluginMeta()));
-                    contents.add(getContent("Server Meta", payload.getServerMeta()));
-                    for (EntryData entryData : payload.getAdditionalPluginMeta()) {
-                        contents.add(getContent(entryData.getName(), entryData.getContent()));
-                    }
+            var payload = debugPayload.get();
 
-                    contents.add(getContent("Latest.log", payload.getLatestLog().getLog()));
-                    contents.add(getContent("Plugin Log", payload.getLatestLog().getPluginLog()));
+            List<String> contents = new ArrayList<>();
+            PluginMetaData pluginMeta = payload.pluginMeta();
+            contents.add(getContent("Plugin Meta", payload.pluginMeta()));
+            contents.add(getContent("Server Meta", payload.serverMeta()));
+            for (EntryData entryData : payload.additionalPluginMeta()) {
+                contents.add(getContent(entryData.getName(), entryData.getContent()));
+            }
 
-                    if (payload.getLatestLog().getInternalExceptions().length != 0) {
-                        contents.add(getContent("Internal Exceptions and Warnings",
-                                String.join("\n\n", payload.getLatestLog().getInternalExceptions())));
-                    }
+            contents.add(getContent("Latest.log", payload.latestLog().getLog()));
+            contents.add(getContent("Plugin Log", payload.latestLog().getPluginLog()));
 
-                    if (payload.getLatestLog().getExternalExceptions().length != 0) {
-                        contents.add(getContent("External Exceptions and Warnings",
-                                String.join("\n\n", payload.getLatestLog().getExternalExceptions())));
-                    }
+            if (payload.latestLog().getInternalExceptions().length != 0) {
+                contents.add(getContent("Internal Exceptions and Warnings",
+                        String.join("\n\n", payload.latestLog().getInternalExceptions())));
+            }
 
-                    for (EntryData configDump : payload.getConfigDumps()) {
-                        contents.add(getContent(configDump.getName(), configDump.getContent()));
-                    }
+            if (payload.latestLog().getExternalExceptions().length != 0) {
+                contents.add(getContent("External Exceptions and Warnings",
+                        String.join("\n\n", payload.latestLog().getExternalExceptions())));
+            }
 
-                    String page = pageTemplate.replace("{{ content }}", String.join("\n", contents));
-                    page = page.replace("{{ reportId }}", hash);
-                    page = page.replace("{{ title }}", "Report created for " + pluginMeta.getName() + " - " + pluginMeta.getVersion());
-                    page = page.replace("{{ pageUrl }}", configuration.getHostName() + "/debug/v1/read/" + hash);
-                    page = page.replace("{{ favicon }}", "https://eldoria.de/favicon-196x196.png");
+            for (EntryData configDump : payload.configDumps()) {
+                contents.add(getContent(configDump.getName(), configDump.getContent()));
+            }
 
-                    response.body(page);
+            String page = pageTemplate.replace("{{ content }}", String.join("\n", contents));
+            page = page.replace("{{ reportId }}", hash);
+            page = page.replace("{{ title }}", "Report created for " + pluginMeta.getName() + " - " + pluginMeta.getVersion());
+            page = page.replace("{{ pageUrl }}", configuration.getHostName() + "/debug/v1/read/" + hash);
+            page = page.replace("{{ favicon }}", "https://eldoria.de/favicon-196x196.png");
 
-                    response.status(HttpStatusCodes.STATUS_CODE_OK);
-                    return response.body();
-                }));
-            });
+            ctx.result(page).contentType("text/html").status(HttpStatusCodes.STATUS_CODE_OK);
         });
     }
 

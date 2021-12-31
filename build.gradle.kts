@@ -5,28 +5,32 @@ plugins {
 }
 
 repositories {
-    mavenCentral()
-    maven("https://m2.dv8tion.net/releases")
     maven("https://jcenter.bintray.com")
+    maven("https://eldonexus.de/repository/maven-public/")
+    maven("https://eldonexus.de/repository/maven-proxies/")
+    mavenCentral()
 }
 
 dependencies {
-    implementation("commons-io:commons-io:2.7")
-    implementation("com.google.api-client:google-api-client:1.23.0")
+    implementation("commons-io:commons-io:2.11.0")
+    implementation("com.google.api-client:google-api-client:1.32.2")
     implementation("com.google.guava:guava:31.0.1-jre")
-    implementation("com.google.code.gson:gson:2.8.9")
-    implementation("com.sparkjava:spark-core:2.9.3")
-    implementation("org.apache.commons:commons-lang3:3.9")
-    implementation("net.dv8tion", "JDA", "4.3.0_339") {
+    implementation("com.fasterxml.jackson.core", "jackson-databind", "2.12.3")
+    implementation("io.javalin", "javalin", "3.13.9")
+    implementation("org.apache.commons","commons-lang3","3.12.0")
+    implementation("net.dv8tion", "JDA", "5.0.0-alpha.3") {
         exclude(module = "opus-java")
     }
     implementation("com.zaxxer:HikariCP:5.0.0")
-    implementation("org.mariadb.jdbc:mariadb-java-client:2.7.4")
+    implementation("de.chojo", "sql-util", "1.1.5")
+    implementation("org.postgresql", "postgresql", "42.3.1")
+
     implementation("org.slf4j:slf4j-api:1.7.32")
     implementation("org.apache.logging.log4j:log4j-core:2.17.0")
     implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.17.0")
     compileOnly("org.projectlombok", "lombok", "1.18.22")
     annotationProcessor("org.projectlombok", "lombok", "1.18.22")
+
 }
 
 group = "de.eldoria"
@@ -40,11 +44,6 @@ publishing {
     }
 }
 
-tasks.withType<JavaCompile>() {
-    options.encoding = "UTF-8"
-}
-
-
 tasks {
     shadowJar {
         mergeServiceFiles()
@@ -52,9 +51,11 @@ tasks {
             attributes(mapOf("Main-Class" to "de.eldoria.updatebutler.UpdateButler"))
         }
     }
+
     build {
         dependsOn(shadowJar)
     }
+
     compileJava {
         options.encoding = "UTF-8"
     }

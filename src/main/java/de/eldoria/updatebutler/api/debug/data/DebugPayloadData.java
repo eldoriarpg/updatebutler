@@ -1,11 +1,8 @@
 package de.eldoria.updatebutler.api.debug.data;
 
-import lombok.Data;
-
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-@Data
 public class DebugPayloadData {
     protected PluginMetaData pluginMeta;
     protected ServerMetaData serverMeta;
@@ -36,5 +33,29 @@ public class DebugPayloadData {
                 + Arrays.stream(configDumps)
                 .map(c -> "Path: " + c.getName() + "\n" + c.getContent())
                 .collect(Collectors.joining("\n\n"));
+    }
+
+    public PluginMetaData pluginMeta() {
+        return this.pluginMeta;
+    }
+
+    public ServerMetaData serverMeta() {
+        return this.serverMeta;
+    }
+
+    public EntryData[] additionalPluginMeta() {
+        return this.additionalPluginMeta;
+    }
+
+    public LogData latestLog() {
+        return this.latestLog;
+    }
+
+    public EntryData[] configDumps() {
+        return this.configDumps;
+    }
+
+    public int version() {
+        return this.v;
     }
 }

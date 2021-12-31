@@ -4,6 +4,7 @@ import com.google.api.client.http.HttpStatusCodes;
 import de.eldoria.updatebutler.api.debug.DebugAPI;
 import de.eldoria.updatebutler.api.updates.UpdatesAPI;
 import de.eldoria.updatebutler.config.Configuration;
+import io.javalin.Javalin;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
@@ -23,14 +24,18 @@ import static spark.Spark.port;
 
 @Slf4j
 public class WebAPI {
+    private final Javalin javalin;
     private final DebugAPI debugAPI;
     private final UpdatesAPI updatesAPI;
     private final RateLimiter rateLimiter = new RateLimiter(1, ChronoUnit.SECONDS);
 
     public WebAPI(Configuration configuration, DataSource source) {
         initAPI(configuration);
-        debugAPI = new DebugAPI(source, configuration);
-        updatesAPI = new UpdatesAPI(configuration);
+        javalin = Javalin.create()
+                .start(configuration.getHost(), configuration.getPort());
+
+        debugAPI = new DebugAPI(source, javalin, configuration);
+        updatesAPI = new UpdatesAPI(javalin, configuration);
     }
 
     private void initAPI(Configuration configuration) {

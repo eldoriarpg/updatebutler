@@ -79,7 +79,8 @@ public final class UpdateButler {
                         GatewayIntent.DIRECT_MESSAGES,
                         GatewayIntent.GUILD_MEMBERS,
                         GatewayIntent.GUILD_MESSAGES,
-                        GatewayIntent.GUILD_EMOJIS)
+                        GatewayIntent.GUILD_EMOJIS,
+                        GatewayIntent.GUILD_MESSAGES)
                 .setMaxReconnectDelay(60)
                 .disableCache(CacheFlag.ACTIVITY, CacheFlag.CLIENT_STATUS, CacheFlag.VOICE_STATE)
                 .enableCache(CacheFlag.MEMBER_OVERRIDES)

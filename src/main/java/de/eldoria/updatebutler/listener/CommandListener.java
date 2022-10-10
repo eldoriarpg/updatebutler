@@ -415,9 +415,9 @@ public class CommandListener extends ListenerAdapter {
             Release release = releases.get(i);
             tableBuilder.setNextRow(
                     String.valueOf(release.isDevBuild()),
-                    release.getVersion(),
-                    C.DATE_FORMAT.format(release.getPublished()),
-                    String.valueOf(release.getDownloads()));
+                    release.version(),
+                    C.DATE_FORMAT.format(release.published()),
+                    String.valueOf(release.downloads()));
         }
 
         channel.sendMessage("Versions of " + application.getDisplayName() + "\n"
@@ -490,15 +490,15 @@ public class CommandListener extends ListenerAdapter {
                         channel.sendMessage("Creating new plain text command.\nPlease enter the text which should be send.").queue();
                     } else {
                         channel.sendMessage("Creating new embed text command.\nPlease enter the embed title.").queue();
-                        builder = new EmbedCommand.Builder(this.command == null ? userCommand.getCommand() : this.command);
+                        builder = new EmbedCommand.Builder(this.command == null ? userCommand.command() : this.command);
                     }
                     return false;
                 }
 
                 if (commandType == CommandType.PLAIN) {
-                    PlainCommand command = new PlainCommand(this.command == null ? userCommand.getCommand() : this.command, content);
+                    PlainCommand command = new PlainCommand(this.command == null ? userCommand.command() : this.command, content);
                     guildSettings.addUserCommand(command);
-                    channel.sendMessage("Command **" + command.getCommand() + "** created.\nOutput:").queue();
+                    channel.sendMessage("Command **" + command.command() + "** created.\nOutput:").queue();
                     command.sendCommandOutput(channel);
                     return true;
                 } else {
@@ -527,7 +527,7 @@ public class CommandListener extends ListenerAdapter {
                         if ("no".equalsIgnoreCase(content)) {
                             EmbedCommand command = builder.build();
                             guildSettings.addUserCommand(command);
-                            channel.sendMessage("Command **" + command.getCommand() + "** created.\nOutput:").queue();
+                            channel.sendMessage("Command **" + command.command() + "** created.\nOutput:").queue();
                             command.sendCommandOutput(channel);
                             return true;
                         }
@@ -582,7 +582,7 @@ public class CommandListener extends ListenerAdapter {
                     return false;
                 }
                 guildSettings.removeCommand(userCommand.get());
-                channel.sendMessage("Command **" + userCommand.get().getCommand() + "** removed.").queue();
+                channel.sendMessage("Command **" + userCommand.get().command() + "** removed.").queue();
                 return true;
             }
         });
@@ -664,11 +664,11 @@ public class CommandListener extends ListenerAdapter {
                             }
                             switch (phraseType) {
                                 case REGEX:
-                                    guildSettings.addPhrase(new RegexPhrase(phrase, userCommand.get().getCommand()));
+                                    guildSettings.addPhrase(new RegexPhrase(phrase, userCommand.get().command()));
                                     channel.sendMessage("New regex phrase created.").queue();
                                     break;
                                 case PLAIN:
-                                    guildSettings.addPhrase(new PlainPhrase(phrase, userCommand.get().getCommand(), caseSensitive));
+                                    guildSettings.addPhrase(new PlainPhrase(phrase, userCommand.get().command(), caseSensitive));
                                     channel.sendMessage("New plain phrase created.").queue();
                                     break;
                             }
@@ -1086,26 +1086,26 @@ public class CommandListener extends ListenerAdapter {
 
                             this.application = application.get();
                             channel.sendMessage("You selected " + this.application.getDisplayName() + ".").queue();
-                            String versions = this.application.getReleases(true).stream().map(Release::getVersion).collect(Collectors.joining(", "));
+                            String versions = this.application.getReleases(true).stream().map(Release::version).collect(Collectors.joining(", "));
                             channel.sendMessage("Which version do you want to delete?\n" + versions).queue();
                             return false;
                         }
 
                         if (release == null) {
                             Optional<Release> optionalRelease = application.getRelease(content);
-                            String versions = this.application.getReleases(true).stream().map(Release::getVersion).collect(Collectors.joining(", "));
+                            String versions = this.application.getReleases(true).stream().map(Release::version).collect(Collectors.joining(", "));
                             if (optionalRelease.isEmpty()) {
                                 channel.sendMessage("Invalid release.\n Which version do you want to delete?\n" + versions).queue();
                                 return false;
                             }
                             release = optionalRelease.get();
-                            channel.sendMessage("Attemting to delete release " + release.getVersion() + ".\nPlease confirm by typing \"confirm\"").queue();
+                            channel.sendMessage("Attemting to delete release " + release.version() + ".\nPlease confirm by typing \"confirm\"").queue();
                             return false;
                         }
 
                         if ("confirm".equalsIgnoreCase(content)) {
-                            application.deleteRelease(release.getVersion());
-                            channel.sendMessage("Removed version **" + release.getVersion() + "**.").queue();
+                            application.deleteRelease(release.version());
+                            channel.sendMessage("Removed version **" + release.version() + "**.").queue();
                             return true;
                         }
                         if ("cancel".equalsIgnoreCase(content)) {
@@ -1114,7 +1114,7 @@ public class CommandListener extends ListenerAdapter {
                         }
 
                         channel.sendMessage("Please write **\"confirm\"** to delete the version **"
-                                + release.getVersion() + "** or **\"cancel\"** to cancel the deletion.").queue();
+                                            + release.version() + "** or **\"cancel\"** to cancel the deletion.").queue();
                         configuration.save();
                         return false;
                     }

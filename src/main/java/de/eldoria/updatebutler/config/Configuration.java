@@ -1,22 +1,21 @@
 package de.eldoria.updatebutler.config;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.annotations.Expose;
-import com.google.gson.annotations.SerializedName;
-import com.google.gson.stream.JsonReader;
-import de.eldoria.updatebutler.config.commands.UserCommand;
-import de.eldoria.updatebutler.config.phrase.Phrase;
-import de.eldoria.updatebutler.config.util.GsonAdapter;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import de.eldoria.updatebutler.config.commands.EmbedCommand;
+import de.eldoria.updatebutler.config.commands.PlainCommand;
+import de.eldoria.updatebutler.config.phrase.PlainPhrase;
+import de.eldoria.updatebutler.config.phrase.RegexPhrase;
 import de.eldoria.updatebutler.listener.ReleaseCreateListener;
 import de.eldoria.updatebutler.util.FileUtil;
 import lombok.Data;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -28,39 +27,33 @@ import static de.eldoria.updatebutler.util.FileUtil.home;
 @Data
 public class Configuration {
 
-    private static final Gson GSON = new GsonBuilder()
-            .serializeNulls()
-            .excludeFieldsWithoutExposeAnnotation()
-            .setPrettyPrinting()
-            .registerTypeAdapter(UserCommand.class,
-                    new GsonAdapter<UserCommand>("de.eldoria.updatebutler.config.commands"))
-            .registerTypeAdapter(Phrase.class,
-                    new GsonAdapter<Phrase>("de.eldoria.updatebutler.config.phrase"))
-            .create();
-    @Expose
+    private static final ObjectMapper mapper;
     private String token = "";
-    @Expose
     private String hostName = "";
-    @Expose
     private String host = "";
-    @Expose
     private int port = 19050;
-    @SerializedName("guildSettings")
-    @Expose
     private HashMap<String, GuildSettings> guildSettings = new HashMap<>();
+    @JsonIgnore
     private ReleaseCreateListener listener;
-    @Expose
     private int currentId = 0;
-    @Expose
-    private DBSettings dbSettings;
+    private DBSettings dbSettings = new DBSettings();
+
+    static {
+        mapper = new ObjectMapper()
+                .setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE)
+                .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
+                .setDefaultPrettyPrinter(new DefaultPrettyPrinter());
+        mapper.registerSubtypes(new NamedType(EmbedCommand.class, "embed_command"));
+        mapper.registerSubtypes(new NamedType(PlainCommand.class, "plain_command"));
+        mapper.registerSubtypes(new NamedType(PlainPhrase.class, "plain_phrase"));
+        mapper.registerSubtypes(new NamedType(RegexPhrase.class, "regex_phrase"));
+    }
 
     public static Configuration load() throws IOException {
         File config = FileUtil.createDirectory("config");
         try (var in = ClassLoader.getSystemClassLoader().getResourceAsStream("config.json")) {
             var file = FileUtil.createFile(in, "/config/config.json");
-            try (JsonReader reader = new JsonReader(new FileReader(file))) {
-                return GSON.fromJson(reader, Configuration.class);
-            }
+            return mapper.readValue(file, Configuration.class);
         }
     }
 
@@ -73,8 +66,8 @@ public class Configuration {
     }
 
     public void save() {
-        try (var a = new FileWriter(Paths.get(home(), "/config/config.json").toFile())) {
-            GSON.toJson(this, a);
+        try {
+            mapper.writeValue(Paths.get(home(), "/config/config.json").toFile(), this);
         } catch (IOException e) {
             log.warn("Could not save config", e);
         }
@@ -112,7 +105,7 @@ public class Configuration {
     }
 
     public void addRelease(Application application, Release release) {
-        application.addRelease(release.getVersion(), release);
+        application.addRelease(release.version(), release);
         listener.onReleaseCreation(application, release);
         save();
     }

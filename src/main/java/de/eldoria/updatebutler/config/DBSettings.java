@@ -1,30 +1,26 @@
 package de.eldoria.updatebutler.config;
 
-import com.google.gson.annotations.Expose;
-import lombok.Data;
-import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-@Data
 public class DBSettings implements Cloneable {
-    @Expose
     private String address = "";
-    @Expose
     private String port = "";
-    @Expose
     private String database = "";
-    @Expose
+    private String schema = "";
     private String user = "";
-    @Expose
     private String password = "";
-    @Expose
     private int minConnections = 1;
-    @Expose
     private int maxConnections = 25;
 
-    public DBSettings(String address, String port, String database, String user, String password, int minConnections, int maxConnections) {
+    @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
+    public DBSettings(@JsonProperty("adress") String address, @JsonProperty("port") String port, @JsonProperty("database") String database,
+                      @JsonProperty("schema") String schema, @JsonProperty("user") String user, @JsonProperty("password") String password,
+                      @JsonProperty("minConnectsions") int minConnections, @JsonProperty("maxConnections") int maxConnections) {
         this.address = address;
         this.port = port;
         this.database = database;
+        this.schema = schema;
         this.user = user;
         this.password = password;
         this.minConnections = minConnections;
@@ -36,6 +32,43 @@ public class DBSettings implements Cloneable {
 
     @Override
     public DBSettings clone() {
-        return new DBSettings(address, port, database, user, password, minConnections, maxConnections);
+        return new DBSettings(address, port, database, schema, user, password, minConnections, maxConnections);
+    }
+
+
+    public String address() {
+        return this.address;
+    }
+
+    public String port() {
+        return this.port;
+    }
+
+    public String database() {
+        return this.database;
+    }
+
+    public String schema() {
+        return this.schema;
+    }
+
+    public String user() {
+        return this.user;
+    }
+
+    public String password() {
+        return this.password;
+    }
+
+    public int minConnections() {
+        return this.minConnections;
+    }
+
+    public int maxConnections() {
+        return this.maxConnections;
+    }
+
+    public String toString() {
+        return "DBSettings(address=" + this.address() + ", port=" + this.port() + ", database=" + this.database() + ", schema=" + this.schema() + ", user=" + this.user() + ", password=" + this.password() + ", minConnections=" + this.minConnections() + ", maxConnections=" + this.maxConnections() + ")";
     }
 }

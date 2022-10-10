@@ -1,32 +1,72 @@
 package de.eldoria.updatebutler.api.updates;
 
-import com.google.gson.annotations.SerializedName;
-import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
-@Getter
 public class GithubReleasePayload {
     private String action;
     private GitRelease release;
 
-    @Getter
+    public String getAction() {
+        return this.action;
+    }
+
+    public GitRelease getRelease() {
+        return this.release;
+    }
+
     public class GitRelease {
-        @SerializedName("tag_name")
+        @JsonProperty("tag_name")
         String tag;
         String name;
         String body;
         boolean draft;
         boolean prerelease;
-        @SerializedName("created_at")
+        @JsonProperty("created_at")
         String createdAt;
         List<Asset> assets;
 
-        @Getter
+        public String getTag() {
+            return this.tag;
+        }
+
+        public String getName() {
+            return this.name;
+        }
+
+        public String getBody() {
+            return this.body;
+        }
+
+        public boolean isDraft() {
+            return this.draft;
+        }
+
+        public boolean isPrerelease() {
+            return this.prerelease;
+        }
+
+        public String getCreatedAt() {
+            return this.createdAt;
+        }
+
+        public List<Asset> getAssets() {
+            return this.assets;
+        }
+
         public class Asset {
-            @SerializedName("browser_download_url")
+            @JsonProperty("browser_download_url")
             String url;
             String name;
+
+            public String getUrl() {
+                return this.url;
+            }
+
+            public String getName() {
+                return this.name;
+            }
         }
     }
 }

@@ -8,7 +8,7 @@ create table if not exists debugs
 );
 
 create unique index if not exists debugs_hash_uindex
-    on debugs (hash);
+    on debug (read_hash);
 
 create table if not exists debug_data
 (
@@ -41,4 +41,3 @@ create table if not exists debug_configs
 
 create index if not exists debug_configs_id_index
     on debug_configs (debug_id);
-

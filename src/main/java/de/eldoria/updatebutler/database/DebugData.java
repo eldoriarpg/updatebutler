@@ -1,212 +1,134 @@
 package de.eldoria.updatebutler.database;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.chojo.sqlutil.base.QueryFactoryHolder;
+import de.chojo.sqlutil.exceptions.ExceptionTransformer;
+import de.chojo.sqlutil.wrapper.QueryBuilderConfig;
 import de.eldoria.updatebutler.api.debug.DebugPayload;
 import de.eldoria.updatebutler.api.debug.DebugResponse;
 import de.eldoria.updatebutler.api.debug.data.EntryData;
 import de.eldoria.updatebutler.api.debug.data.LogData;
 import de.eldoria.updatebutler.api.debug.data.PluginMetaData;
 import de.eldoria.updatebutler.api.debug.data.ServerMetaData;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.codec.digest.DigestUtils;
+import org.slf4j.Logger;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
-import java.util.OptionalInt;
 
-@Slf4j
-public class DebugData {
+import static org.slf4j.LoggerFactory.getLogger;
 
-    private final DataSource source;
-    private final Gson gson = new GsonBuilder().serializeNulls().create();
+public class DebugData extends QueryFactoryHolder {
+
+    private final ObjectMapper mapper = new ObjectMapper();
+    // private final Gson gson = new GsonBuilder().serializeNulls().create();
+    private static final Logger log = getLogger(DebugData.class);
+    private MessageDigest hash;
 
     public DebugData(DataSource source) {
-        this.source = source;
-    }
-
-    public Optional<DebugResponse> submitDebug(DebugPayload payload) {
-        int id;
-        String hash;
-        String deletionHash;
-        try (Connection conn = source.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "INSERT into debugs(hash, deletion_hash) VALUES (?,?)");
-             PreparedStatement stmt2 = conn.prepareStatement(
-                     "SELECT LAST_INSERT_ID();")) {
-            hash = DigestUtils.shaHex(String.valueOf(System.nanoTime()));
-            deletionHash = DigestUtils.shaHex(System.nanoTime() + hash);
-            stmt.setString(1, hash);
-            stmt.setString(2, deletionHash);
-            stmt.execute();
-            ResultSet rs = stmt2.executeQuery();
-            if (rs.next()) {
-                id = rs.getInt(1);
-            } else {
-                throw new IllegalStateException("No id for debug was created.");
-            }
-        } catch (SQLException e) {
-            log.error("Could not register new debug.", e);
-            return Optional.empty();
-        }
-
-        try (Connection conn = source.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "INSERT into debug_data(id, plugin_meta, server_meta, log_meta, additional_data) VALUES (?,?,?,?,?)")) {
-            stmt.setInt(1, id);
-            stmt.setString(2, gson.toJson(payload.getPluginMeta()));
-            stmt.setString(3, gson.toJson(payload.getServerMeta()));
-            stmt.setString(4, gson.toJson(payload.getLatestLog()));
-            stmt.setString(5, gson.toJson(payload.getAdditionalPluginMeta()));
-            stmt.execute();
-        } catch (SQLException e) {
-            log.error("Could not register new debug.", e);
-            return Optional.empty();
-        }
-
-        for (EntryData configDump : payload.getConfigDumps()) {
-            try (Connection conn = source.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(
-                         "INSERT into debug_configs(debug_id, path, config) VALUES (?,?,?)")) {
-                stmt.setInt(1, id);
-                stmt.setString(2, configDump.getName());
-                stmt.setString(3, configDump.getContent());
-                stmt.execute();
-            } catch (SQLException e) {
-                log.error("Could not register new debug.", e);
-                return Optional.empty();
-            }
-        }
-        return Optional.of(new DebugResponse(hash, deletionHash));
-    }
-
-    public OptionalInt getIdFromDeletionHash(String hash) {
-        try (Connection conn = source.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "Select id from debugs where deletion_hash = ?")) {
-            stmt.setString(1, hash);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return OptionalInt.of(rs.getInt(1));
-            } else {
-                return OptionalInt.empty();
-            }
-        } catch (SQLException e) {
-            log.error("Could not register new debug.", e);
-            return OptionalInt.empty();
+        super(source, QueryBuilderConfig.builder()
+                .withExceptionHandler(e -> log.error(ExceptionTransformer.prettyException("SQL Exception occured", e), e))
+                .build());
+        try {
+            hash = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            log.error("Could not create MessageDigest", e);
         }
     }
 
-    public OptionalInt getIdFromHash(String hash) {
-        try (Connection conn = source.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "Select id from debugs where hash = ?")) {
-            stmt.setString(1, hash);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return OptionalInt.of(rs.getInt(1));
-            } else {
-                return OptionalInt.empty();
-            }
-        } catch (SQLException e) {
-            log.error("Could not register new debug.", e);
-            return OptionalInt.empty();
-        }
+    private String hash(String value) {
+        return new String(hash.digest(value.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
     }
 
-    public Optional<DebugPayload> loadDebug(Integer id) {
-        PluginMetaData pluginMeta;
-        LogData latestLog;
-        ServerMetaData serverMeta;
-        EntryData[] additionalMeta;
+    public Optional<DebugResponse> submitDebug(DebugPayload payload) throws JsonProcessingException {
+        var read = hash(String.valueOf(System.nanoTime()));
+        var delete = hash(System.nanoTime() + read);
+        var debugId = builder(Integer.class)
+                .query("INSERT INTO debug(read_hash, deletion_hash) VALUES(?,?) RETURNING id")
+                .paramsBuilder(param -> param.setString(read).setString(delete))
+                .readRow(r -> r.getInt(1))
+                .firstSync();
 
-        try (Connection conn = source.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "Select log_meta, plugin_meta, server_meta, additional_data from debug_data where id = ?")) {
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                pluginMeta = gson.fromJson(rs.getString("plugin_meta"), PluginMetaData.class);
-                serverMeta = gson.fromJson(rs.getString("server_meta"), ServerMetaData.class);
-                additionalMeta = gson.fromJson(rs.getString("additional_data"), EntryData[].class);
-                latestLog = gson.fromJson(rs.getString("log_meta"), LogData.class);
-            } else {
-                return Optional.empty();
-            }
-        } catch (SQLException e) {
-            log.error("Could not register new debug.", e);
-            return Optional.empty();
+        if (debugId.isEmpty()) {
+            throw new IllegalStateException("No id for debug was created.");
+        }
+        var plugin = mapper.writeValueAsString(payload.pluginMeta());
+        var server = mapper.writeValueAsString(payload.serverMeta());
+        var log = mapper.writeValueAsString(payload.latestLog());
+        var additional = mapper.writeValueAsString(payload.additionalPluginMeta());
+        var builder = builder().query("INSERT INTO debug_data(debug_id, plugin, server_meta, log_meta, additional) VALUES (?,?,?,?,?)")
+                .paramsBuilder(p -> p.setInt(debugId.get()).setString(plugin).setString(server).setString(log).setString(additional));
+
+        for (var configDump : payload.configDumps()) {
+            builder.append().query("INSERT INTO debug_configs(debug_id, config_path, content) VALUES (?,?,?)")
+                    .paramsBuilder(p -> p.setInt(debugId.get()).setString(configDump.getName()).setString(configDump.getContent()));
         }
 
-        List<EntryData> configs = new ArrayList<>();
+        builder.insert().execute();
 
-        try (Connection conn = source.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "Select path, config from debug_configs where debug_id = ?")) {
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                configs.add(new EntryData(rs.getString("path"), rs.getString("config")));
-            }
-        } catch (SQLException e) {
-            log.error("Could not register new debug.", e);
-            return Optional.empty();
-        }
-        return Optional.of(new DebugPayload(pluginMeta, serverMeta, additionalMeta, latestLog, configs.toArray(new EntryData[0])));
+        return Optional.of(new DebugResponse(read, delete));
+    }
+
+    public Optional<Integer> getIdFromDeletionHash(String hash) {
+        return builder(Integer.class).query("SELECT id FROM debug WHERE deletion_hash = ?")
+                .paramsBuilder(p -> p.setString(hash))
+                .readRow(r -> r.getInt(1))
+                .firstSync();
+    }
+
+    public Optional<Integer> getIdFromHash(String hash) {
+        return builder(Integer.class).query("SELECT id FROM debug WHERE deletion_hash = ?")
+                .paramsBuilder(p -> p.setString(hash))
+                .readRow(r -> r.getInt(1))
+                .firstSync();
+    }
+
+    public Optional<DebugPayload> loadDebug(int id) {
+        var configs = builder(EntryData.class).query("SELECT config_path, content FROM debug_configs WHERE debug_id = ?")
+                .paramsBuilder(p -> p.setInt(id))
+                .readRow(r -> new EntryData(r.getString("config_path"), r.getString("content")))
+                .allSync();
+
+        return builder(DebugPayload.class).query("SELECT log_meta, plugin, server_meta, additional FROM debug_data WHERE debug_id = ?")
+                .paramsBuilder(p -> p.setInt(id))
+                .readRow(r -> {
+                    PluginMetaData plugin;
+                    LogData logData;
+                    ServerMetaData server;
+                    EntryData[] additional;
+                    try {
+                        plugin = mapper.readValue(r.getString("plugin"), PluginMetaData.class);
+                        server = mapper.readValue(r.getString("server_meta"), ServerMetaData.class);
+                        additional = mapper.readValue(r.getString("additional"), EntryData[].class);
+                        logData = mapper.readValue(r.getString("log_meta"), LogData.class);
+                    } catch (JsonProcessingException e) {
+                        log.error("Failed to parse json", e);
+                        return null;
+                    }
+                    var payload = new DebugPayload(
+                            plugin,
+                            server,
+                            additional,
+                            logData,
+                            configs.toArray(EntryData[]::new));
+                    return payload;
+                }).firstSync();
     }
 
     public void cleanUp() {
-        List<Integer> expired = new ArrayList<>();
-        try (Connection conn = source.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "Select id from debugs where timestamp < now() - INTERVAL 30 DAY")) {
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                expired.add(rs.getInt(1));
-            }
-        } catch (SQLException e) {
-            log.error("Could not register new debug.", e);
-            return;
-        }
-
-        for (int id : expired) {
-            deleteDebug(id);
-        }
+        builder().query("DELETE FROM debug WHERE timestamp < NOW() - '30 DAY'::interval")
+                .emptyParams()
+                .delete()
+                .execute();
     }
 
     public void deleteDebug(int id) {
-        try (Connection conn = source.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "Delete from debugs where id = ?")) {
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            log.error("Could not delete debug.", e);
-            return;
-        }
-        try (Connection conn = source.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "Delete from debug_data where id = ?")) {
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            log.error("Could not delete meta data.", e);
-            return;
-        }
-        try (Connection conn = source.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "Delete from debug_configs where debug_id = ?")) {
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            log.error("Could not delete configs.", e);
-            return;
-        }
+        builder().query("DELETE FROM debug WHERE id = ?")
+                .paramsBuilder(p -> p.setInt(id))
+                .delete()
+                .execute();
     }
 }

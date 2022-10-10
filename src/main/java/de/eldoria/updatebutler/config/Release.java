@@ -1,35 +1,18 @@
 package de.eldoria.updatebutler.config;
 
-import com.google.gson.annotations.Expose;
-import com.google.gson.annotations.SerializedName;
-import de.eldoria.updatebutler.util.C;
-import lombok.Data;
-import lombok.Getter;
-
 import java.time.LocalDateTime;
 
-@Data
 public class Release {
-
-    @Expose
     private String version;
-    @Expose
     private String title;
-    @Expose
     private String patchnotes;
-    @SerializedName("dev_build")
-    @Expose
     private boolean devBuild;
-    @Expose
-    private String published;
-    @Expose
+    private LocalDateTime published;
     private String file;
-    @Expose
     private String checksum;
-    @Expose
     private int downloads;
 
-    public Release(String version, String title, String patchnotes, boolean devBuild, String published, String file, String checksum) {
+    public Release(String version, String title, String patchnotes, boolean devBuild, LocalDateTime published, String file, String checksum, int downloads) {
         this.version = version;
         this.title = title;
         this.patchnotes = patchnotes;
@@ -37,13 +20,43 @@ public class Release {
         this.published = published;
         this.file = file;
         this.checksum = checksum;
+        this.downloads = downloads;
     }
 
-    public LocalDateTime getPublished() {
-        return LocalDateTime.parse(published, C.DATE_FORMAT);
-    }
 
     public void downloaded() {
         downloads++;
+    }
+
+    public String version() {
+        return this.version;
+    }
+
+    public String title() {
+        return this.title;
+    }
+
+    public String patchnotes() {
+        return this.patchnotes;
+    }
+
+    public boolean isDevBuild() {
+        return this.devBuild;
+    }
+
+    public LocalDateTime published() {
+        return this.published;
+    }
+
+    public String file() {
+        return this.file;
+    }
+
+    public String checksum() {
+        return this.checksum;
+    }
+
+    public int downloads() {
+        return this.downloads;
     }
 }

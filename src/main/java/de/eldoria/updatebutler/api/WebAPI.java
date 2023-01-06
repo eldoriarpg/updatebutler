@@ -2,6 +2,7 @@ package de.eldoria.updatebutler.api;
 
 import de.eldoria.updatebutler.api.debug.DebugAPI;
 import de.eldoria.updatebutler.api.updates.UpdatesAPI;
+import de.eldoria.updatebutler.api.verify.Verify;
 import de.eldoria.updatebutler.config.Configuration;
 import io.javalin.Javalin;
 import org.eclipse.jetty.http.HttpStatus;
@@ -31,6 +32,7 @@ public class WebAPI {
 
         debugAPI = new DebugAPI(source, javalin, configuration);
         updatesAPI = new UpdatesAPI(javalin, configuration);
+        new Verify(javalin);
     }
 
     private void initAPI(Configuration configuration) {
